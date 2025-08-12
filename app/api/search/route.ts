@@ -17,24 +17,124 @@ function firstNonEmpty(obj: any, keys: string[], fallback = ""): string {
   return fallback
 }
 
+function extractInstagramUsername(url: string): string | null {
+  const patterns = [
+    /instagram\.com\/([^\/\?]+)/,
+    /instagram\.com\/p\/([^\/]+)/,
+    /instagram\.com\/reel\/([^\/]+)/,
+    /instagram\.com\/stories\/([^\/]+)/
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      // For posts/reels, we need to get the username differently
+      if (url.includes('/p/') || url.includes('/reel/')) {
+        return null; // We'll handle this with post scraper
+      }
+      return match[1];
+    }
+  }
+  return null;
+}
+
+async function scrapeInstagramProfiles(usernames: string[], postUrls: string[], apiToken: string) {
+  const profiles: any[] = [];
+  
+  // First, scrape profiles for direct username links
+  if (usernames.length > 0) {
+    const profileEndpoint = "https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items";
+    
+    const profilePayload = {
+      usernames: usernames,
+      resultsLimit: usernames.length,
+      addParentData: false
+    };
+    
+    try {
+      const profileRes = await fetch(`${profileEndpoint}?token=${encodeURIComponent(apiToken)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profilePayload)
+      });
+      
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        profiles.push(...profileData);
+      }
+    } catch (error) {
+      console.error('Profile scraping error:', error);
+    }
+  }
+  
+  // Then, scrape posts/reels to get usernames and profile info
+  if (postUrls.length > 0) {
+    const postEndpoint = "https://api.apify.com/v2/acts/apify~instagram-post-scraper/run-sync-get-dataset-items";
+    
+    const postPayload = {
+      directUrls: postUrls.slice(0, 50), // Limit to avoid timeouts
+      resultsType: "posts",
+      resultsLimit: 50,
+      addParentData: true
+    };
+    
+    try {
+      const postRes = await fetch(`${postEndpoint}?token=${encodeURIComponent(apiToken)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postPayload)
+      });
+      
+      if (postRes.ok) {
+        const postData = await postRes.json();
+        
+        // Extract unique usernames from posts
+        const postUsernames = [...new Set(postData.map((post: any) => post.ownerUsername).filter(Boolean))];
+        
+        // Now get full profile data for these usernames
+        if (postUsernames.length > 0) {
+          const profileEndpoint = "https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items";
+          const additionalProfileRes = await fetch(`${profileEndpoint}?token=${encodeURIComponent(apiToken)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              usernames: postUsernames,
+              resultsLimit: postUsernames.length,
+              addParentData: false
+            })
+          });
+          
+          if (additionalProfileRes.ok) {
+            const additionalProfiles = await additionalProfileRes.json();
+            profiles.push(...additionalProfiles);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Post scraping error:', error);
+    }
+  }
+  
+  return profiles;
+}
+
 export async function POST(req: Request) {
   try {
-    const { who, location, token } = (await req.json()) as {
+    const { who, location, enrichProfiles = false } = (await req.json()) as {
       who?: string
       location?: string
-      token?: string
+      enrichProfiles?: boolean
     }
 
     if (!who || !location) {
       return new Response("Missing required fields: who, location", { status: 400 })
     }
 
-    const provided = extractToken(token)
-    const apiToken = provided || extractToken(process.env.APIFY_API_TOKEN || "")
+    const apiToken = extractToken(process.env.APIFY_API_TOKEN || "")
     if (!apiToken) {
       return new Response(
-        "Missing API token. Provide a token in the request or set APIFY_API_TOKEN as an environment variable.",
-        { status: 400 },
+        "API token not configured. Please set APIFY_API_TOKEN environment variable.",
+        { status: 500 },
       )
     }
 
@@ -139,10 +239,64 @@ export async function POST(req: Request) {
       .map((it) => {
         const title = firstNonEmpty(it, ["title", "pageTitle", "heading", "name"])
         const url = firstNonEmpty(it, ["url", "link", "finalUrl", "pageUrl", "resultUrl", "destinationUrl"])
-        const description = firstNonEmpty(it, ["snippet", "description", "text", "content", "metaDescription"])
-        return { title, url, description }
+        return { title, url }
       })
       .filter((r) => r.title && r.url)
+
+    // NEW: Extract Instagram usernames and enrich with profile data
+    if (enrichProfiles && results.length > 0) {
+      const usernames: string[] = [];
+      const postUrls: string[] = [];
+      
+      results.forEach(result => {
+        if (result.url.includes('instagram.com')) {
+          const username = extractInstagramUsername(result.url);
+          if (username) {
+            usernames.push(username);
+          } else if (result.url.includes('/p/') || result.url.includes('/reel/')) {
+            postUrls.push(result.url);
+          }
+        }
+      });
+      
+      // Get profile data from Instagram
+      const profiles = await scrapeInstagramProfiles(usernames, postUrls, apiToken);
+      
+      // Merge profile data with existing results
+      const enrichedResults = results.map(result => {
+        const username = extractInstagramUsername(result.url);
+        const profile = profiles.find(p => p.username === username);
+        
+        if (profile) {
+          return {
+            ...result,
+            username: profile.username,
+            fullName: profile.fullName,
+            bio: profile.biography,
+            followers: profile.followersCount,
+            following: profile.followsCount,
+            posts: profile.postsCount,
+            verified: profile.verified,
+            businessAccount: profile.businessCategoryName ? true : false,
+            profilePicUrl: profile.profilePicUrl,
+            externalUrl: profile.externalUrl,
+            contactInfo: {
+              email: profile.businessEmail,
+              phone: profile.businessPhoneNumber,
+              address: profile.businessContactMethod
+            }
+          };
+        }
+        return result;
+      });
+      
+      return Response.json({ 
+        query: searchQuery, 
+        results: enrichedResults,
+        profilesFound: profiles.length,
+        enriched: true 
+      });
+    }
 
     return Response.json({ query: searchQuery, results })
   } catch (err: any) {

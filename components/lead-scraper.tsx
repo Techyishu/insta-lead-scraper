@@ -61,6 +61,33 @@ const COUNTRIES_CITIES = {
     "Kilkenny",
     "Sligo",
     "Dundalk"
+  ],
+  "India": [
+    "Mumbai, Maharashtra",
+    "Delhi",
+    "Bangalore, Karnataka",
+    "Hyderabad, Telangana",
+    "Chennai, Tamil Nadu",
+    "Kolkata, West Bengal",
+    "Pune, Maharashtra",
+    "Ahmedabad, Gujarat",
+    "Jaipur, Rajasthan",
+    "Surat, Gujarat",
+    "Lucknow, Uttar Pradesh",
+    "Kanpur, Uttar Pradesh",
+    "Nagpur, Maharashtra",
+    "Indore, Madhya Pradesh",
+    "Thane, Maharashtra",
+    "Bhopal, Madhya Pradesh",
+    "Visakhapatnam, Andhra Pradesh",
+    "Pimpri-Chinchwad, Maharashtra",
+    "Patna, Bihar",
+    "Vadodara, Gujarat",
+    "Ghaziabad, Uttar Pradesh",
+    "Ludhiana, Punjab",
+    "Agra, Uttar Pradesh",
+    "Nashik, Maharashtra",
+    "Faridabad, Haryana"
   ]
 } as const
 
@@ -88,7 +115,7 @@ export default function LeadScraper() {
   const [who, setWho] = useState("")
   const [selectedCountry, setSelectedCountry] = useState("")
   const [selectedCity, setSelectedCity] = useState("")
-  const [searchStrategy, setSearchStrategy] = useState<"google" | "instagram">("google")
+
   const [limit, setLimit] = useState(50)
   const [results, setResults] = useState<ResultItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -101,13 +128,8 @@ export default function LeadScraper() {
     const w = who.trim()
     const l = selectedCity.trim()
     if (!w || !l) return ""
-    
-    if (searchStrategy === "google") {
-      return `site:instagram.com ${w} ${l}`
-    } else {
-      return `${w} ${l}`
-    }
-  }, [who, selectedCity, searchStrategy])
+    return `site:instagram.com ${w} ${l}`
+  }, [who, selectedCity])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -127,7 +149,6 @@ export default function LeadScraper() {
           location: selectedCity,
           limit,
           enrichProfiles,
-          strategy: searchStrategy,
         }),
         signal: controller.signal,
       })
@@ -347,47 +368,7 @@ export default function LeadScraper() {
           </div>
         </div>
 
-        <div className="grid gap-4">
-          <div className="grid gap-3">
-            <Label className="text-sm font-medium">Search Strategy</Label>
-            <div className="flex gap-4">
-              <div className="flex items-center space-x-2">
-                <input
-                  id="google-strategy"
-                  type="radio"
-                  name="searchStrategy"
-                  value="google"
-                  checked={searchStrategy === "google"}
-                  onChange={(e) => setSearchStrategy(e.target.value as "google" | "instagram")}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="google-strategy" className="text-sm cursor-pointer">
-                  Google Search (site:instagram.com)
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  id="instagram-strategy"
-                  type="radio"
-                  name="searchStrategy"
-                  value="instagram"
-                  checked={searchStrategy === "instagram"}
-                  onChange={(e) => setSearchStrategy(e.target.value as "google" | "instagram")}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="instagram-strategy" className="text-sm cursor-pointer">
-                  Direct Instagram Search
-                </Label>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {searchStrategy === "google" 
-                ? "Search Google for Instagram profiles (more comprehensive but may include older results)"
-                : "Search directly for Instagram users by keywords (faster, more recent profiles)"
-              }
-            </p>
-          </div>
-        </div>
+
 
         <div className="flex items-start space-x-2 p-3 bg-muted/30 rounded-lg border">
           <input
@@ -409,15 +390,10 @@ export default function LeadScraper() {
 
         {composedQuery && (
           <div className="text-xs sm:text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg border">
-            <div className="font-medium mb-1">
-              {searchStrategy === "google" ? "Google Search Query:" : "Instagram Keywords:"}
-            </div>
+            <div className="font-medium mb-1">Search Query:</div>
             <code className="text-xs break-all">{composedQuery}</code>
             <div className="text-xs mt-1 opacity-75">
-              {searchStrategy === "google" 
-                ? "Searching Google for Instagram profiles"
-                : "Searching for Instagram users"
-              }
+              Searching Google for Instagram profiles
             </div>
           </div>
         )}
@@ -484,10 +460,7 @@ export default function LeadScraper() {
           <div className="p-3 sm:p-4 border-b">
             <h2 className="text-base sm:text-lg font-medium">Results</h2>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              {searchStrategy === "google" 
-                ? "Showing Google results filtered to Instagram." 
-                : "Showing Instagram users found by keyword search."
-              }
+              Showing Google results filtered to Instagram.
               {enrichProfiles && " Profile data enriched when available."}
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -496,13 +469,6 @@ export default function LeadScraper() {
               </span>
               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
                 Limit: {limit}
-              </span>
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                searchStrategy === "google" 
-                  ? "text-blue-600 bg-blue-50" 
-                  : "text-purple-600 bg-purple-50"
-              }`}>
-                {searchStrategy === "google" ? "🔍 Google Search" : "📸 Instagram Search"}
               </span>
               {enrichProfiles && (
                 <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">

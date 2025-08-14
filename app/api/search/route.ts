@@ -120,15 +120,19 @@ async function scrapeInstagramProfiles(usernames: string[], postUrls: string[], 
 
 export async function POST(req: Request) {
   try {
-    const { who, location, enrichProfiles = false } = (await req.json()) as {
+    const { who, location, limit = 50, enrichProfiles = false } = (await req.json()) as {
       who?: string
       location?: string
+      limit?: number
       enrichProfiles?: boolean
     }
 
     if (!who || !location) {
       return new Response("Missing required fields: who, location", { status: 400 })
     }
+
+    // Validate and clamp limit between 1 and 200
+    const validatedLimit = Math.min(Math.max(parseInt(String(limit)) || 50, 1), 200)
 
     const apiToken = extractToken(process.env.APIFY_API_TOKEN || "")
     if (!apiToken) {
@@ -150,10 +154,10 @@ export async function POST(req: Request) {
       forceExactMatch: false,
       includeIcons: false,
       includeUnfilteredResults: false,
-      maxPagesPerQuery: 1,
+      maxPagesPerQuery: Math.ceil(validatedLimit / 100), // Increase pages if needed for higher limits
       mobileResults: false,
       queries: searchQuery, // actor expects a string
-      resultsPerPage: 100,
+      resultsPerPage: Math.min(validatedLimit, 100), // Max 100 per page
       saveHtml: false,
       saveHtmlToKeyValueStore: true,
     }
@@ -242,6 +246,7 @@ export async function POST(req: Request) {
         return { title, url }
       })
       .filter((r) => r.title && r.url)
+      .slice(0, validatedLimit) // Apply the user-specified limit
 
     // NEW: Extract Instagram usernames and enrich with profile data
     if (enrichProfiles && results.length > 0) {
@@ -294,11 +299,30 @@ export async function POST(req: Request) {
         query: searchQuery, 
         results: enrichedResults,
         profilesFound: profiles.length,
-        enriched: true 
+        enriched: true,
+        limit: validatedLimit,
+        totalBeforeLimit: (items as any[])
+          .map((it) => {
+            const title = firstNonEmpty(it, ["title", "pageTitle", "heading", "name"])
+            const url = firstNonEmpty(it, ["url", "link", "finalUrl", "pageUrl", "resultUrl", "destinationUrl"])
+            return { title, url }
+          })
+          .filter((r) => r.title && r.url).length
       });
     }
 
-    return Response.json({ query: searchQuery, results })
+    return Response.json({ 
+      query: searchQuery, 
+      results,
+      limit: validatedLimit,
+      totalBeforeLimit: (items as any[])
+        .map((it) => {
+          const title = firstNonEmpty(it, ["title", "pageTitle", "heading", "name"])
+          const url = firstNonEmpty(it, ["url", "link", "finalUrl", "pageUrl", "resultUrl", "destinationUrl"])
+          return { title, url }
+        })
+        .filter((r) => r.title && r.url).length
+    })
   } catch (err: any) {
     return new Response("Unexpected error: " + (err?.message || "Unknown error"), { status: 500 })
   }

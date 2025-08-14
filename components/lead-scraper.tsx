@@ -34,6 +34,7 @@ type ResultItem = {
 export default function LeadScraper() {
   const [who, setWho] = useState("")
   const [location, setLocation] = useState("")
+  const [limit, setLimit] = useState(50)
   const [results, setResults] = useState<ResultItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -61,6 +62,7 @@ export default function LeadScraper() {
         body: JSON.stringify({
           who,
           location,
+          limit,
           enrichProfiles,
         }),
       })
@@ -185,7 +187,7 @@ export default function LeadScraper() {
   return (
     <div className="grid gap-4 sm:gap-6">
       <form onSubmit={handleSubmit} className="grid gap-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="who">Who are you looking for?</Label>
             <Input
@@ -207,6 +209,25 @@ export default function LeadScraper() {
               required
               className="text-base"
             />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="limit">Max Results</Label>
+            <Input
+              id="limit"
+              type="number"
+              min="1"
+              max="200"
+              placeholder="50"
+              value={limit}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 1
+                setLimit(Math.min(Math.max(value, 1), 200))
+              }}
+              className="text-base"
+            />
+            <p className="text-xs text-muted-foreground">
+              Maximum 200 results
+            </p>
           </div>
         </div>
 
@@ -302,6 +323,9 @@ export default function LeadScraper() {
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
                 Total: {results.length}
+              </span>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                Limit: {limit}
               </span>
               {enrichProfiles && (
                 <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">

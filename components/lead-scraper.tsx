@@ -9,7 +9,60 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Search, Upload, Download } from "lucide-react"
+
+// Countries & Cities with High Potential for $500 Website Clients
+const COUNTRIES_CITIES = {
+  "United States": [
+    "Boise, Idaho",
+    "Des Moines, Iowa", 
+    "Tulsa, Oklahoma",
+    "Chattanooga, Tennessee",
+    "Spokane, Washington",
+    "Little Rock, Arkansas"
+  ],
+  "United Kingdom": [
+    "Leicester",
+    "Nottingham",
+    "Plymouth", 
+    "Sunderland",
+    "Wolverhampton",
+    "Derby"
+  ],
+  "Australia": [
+    "Hobart, Tasmania",
+    "Townsville, Queensland",
+    "Cairns, Queensland",
+    "Launceston, Tasmania", 
+    "Darwin, Northern Territory",
+    "Rockhampton, Queensland"
+  ],
+  "Canada": [
+    "Saskatoon, Saskatchewan",
+    "Regina, Saskatchewan",
+    "Kelowna, British Columbia",
+    "Moncton, New Brunswick",
+    "St. John's, Newfoundland and Labrador",
+    "Kamloops, British Columbia"
+  ],
+  "New Zealand": [
+    "Hamilton",
+    "Tauranga",
+    "Napier",
+    "Hastings",
+    "Nelson", 
+    "Palmerston North"
+  ],
+  "Ireland": [
+    "Limerick",
+    "Galway",
+    "Waterford",
+    "Kilkenny",
+    "Sligo",
+    "Dundalk"
+  ]
+} as const
 
 type ResultItem = {
   title: string
@@ -33,7 +86,9 @@ type ResultItem = {
 
 export default function LeadScraper() {
   const [who, setWho] = useState("")
-  const [location, setLocation] = useState("")
+  const [selectedCountry, setSelectedCountry] = useState("")
+  const [selectedCity, setSelectedCity] = useState("")
+  const [searchStrategy, setSearchStrategy] = useState<"google" | "instagram">("google")
   const [limit, setLimit] = useState(50)
   const [results, setResults] = useState<ResultItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -44,10 +99,15 @@ export default function LeadScraper() {
 
   const composedQuery = useMemo(() => {
     const w = who.trim()
-    const l = location.trim()
+    const l = selectedCity.trim()
     if (!w || !l) return ""
-    return `site:instagram.com ${w} ${l}`
-  }, [who, location])
+    
+    if (searchStrategy === "google") {
+      return `site:instagram.com ${w} ${l}`
+    } else {
+      return `${w} ${l}`
+    }
+  }, [who, selectedCity, searchStrategy])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -56,26 +116,45 @@ export default function LeadScraper() {
     setResults([])
 
     try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minute timeout
+
       const res = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           who,
-          location,
+          location: selectedCity,
           limit,
           enrichProfiles,
+          strategy: searchStrategy,
         }),
+        signal: controller.signal,
       })
+
+      clearTimeout(timeoutId)
 
       if (!res.ok) {
         const text = await res.text()
+        if (res.status === 408) {
+          throw new Error(`Request timeout. Large result sets (${limit} leads) can take too long to process. Try with a smaller limit or check your network connection.`)
+        }
         throw new Error(text || "Failed to fetch results")
       }
 
       const data = (await res.json()) as { results: ResultItem[]; query: string }
+      console.log('Frontend received data:', { 
+        resultsLength: data.results?.length, 
+        limit,
+        data: data 
+      })
       setResults(data.results || [])
     } catch (err: any) {
-      setError(err?.message || "Something went wrong while fetching results.")
+      if (err.name === 'AbortError') {
+        setError(`Request timeout after 2 minutes. Large result sets (${limit} leads) may take too long. Try with a smaller limit.`)
+      } else {
+        setError(err?.message || "Something went wrong while fetching results.")
+      }
     } finally {
       setLoading(false)
     }
@@ -124,7 +203,7 @@ export default function LeadScraper() {
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
     link.setAttribute('href', url)
-    link.setAttribute('download', `instagram-leads-${who.replace(/[^a-z0-9]/gi, '-')}-${location.replace(/[^a-z0-9]/gi, '-')}-${new Date().toISOString().split('T')[0]}.csv`)
+    link.setAttribute('download', `instagram-leads-${who.replace(/[^a-z0-9]/gi, '-')}-${selectedCity.replace(/[^a-z0-9]/gi, '-')}-${new Date().toISOString().split('T')[0]}.csv`)
     link.style.visibility = 'hidden'
     document.body.appendChild(link)
     link.click()
@@ -182,12 +261,21 @@ export default function LeadScraper() {
     }
   }
 
-  const searchDisabled = !who.trim() || !location.trim()
+  const searchDisabled = !who.trim() || !selectedCity.trim()
+
+  // Get available cities for selected country
+  const availableCities = selectedCountry ? COUNTRIES_CITIES[selectedCountry as keyof typeof COUNTRIES_CITIES] || [] : []
+
+  // Handle country change and reset city selection
+  const handleCountryChange = (country: string) => {
+    setSelectedCountry(country)
+    setSelectedCity("") // Reset city when country changes
+  }
 
   return (
     <div className="grid gap-4 sm:gap-6">
       <form onSubmit={handleSubmit} className="grid gap-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="who">Who are you looking for?</Label>
             <Input
@@ -200,15 +288,38 @@ export default function LeadScraper() {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              placeholder="e.g., Austin, TX"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              required
-              className="text-base"
-            />
+            <Label htmlFor="country">Country</Label>
+            <Select value={selectedCountry} onValueChange={handleCountryChange}>
+              <SelectTrigger id="country" className="text-base">
+                <SelectValue placeholder="Select country" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.keys(COUNTRIES_CITIES).map((country) => (
+                  <SelectItem key={country} value={country}>
+                    {country}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="city">City</Label>
+            <Select 
+              value={selectedCity} 
+              onValueChange={setSelectedCity}
+              disabled={!selectedCountry}
+            >
+              <SelectTrigger id="city" className="text-base">
+                <SelectValue placeholder={selectedCountry ? "Select city" : "Select country first"} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="limit">Max Results</Label>
@@ -227,6 +338,53 @@ export default function LeadScraper() {
             />
             <p className="text-xs text-muted-foreground">
               Maximum 200 results
+              {limit > 100 && (
+                <span className="block text-orange-600 mt-1">
+                  ⚠️ Large limits (100+) may take longer and could timeout
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4">
+          <div className="grid gap-3">
+            <Label className="text-sm font-medium">Search Strategy</Label>
+            <div className="flex gap-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  id="google-strategy"
+                  type="radio"
+                  name="searchStrategy"
+                  value="google"
+                  checked={searchStrategy === "google"}
+                  onChange={(e) => setSearchStrategy(e.target.value as "google" | "instagram")}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="google-strategy" className="text-sm cursor-pointer">
+                  Google Search (site:instagram.com)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  id="instagram-strategy"
+                  type="radio"
+                  name="searchStrategy"
+                  value="instagram"
+                  checked={searchStrategy === "instagram"}
+                  onChange={(e) => setSearchStrategy(e.target.value as "google" | "instagram")}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="instagram-strategy" className="text-sm cursor-pointer">
+                  Direct Instagram Search
+                </Label>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {searchStrategy === "google" 
+                ? "Search Google for Instagram profiles (more comprehensive but may include older results)"
+                : "Search directly for Instagram users by keywords (faster, more recent profiles)"
+              }
             </p>
           </div>
         </div>
@@ -251,8 +409,16 @@ export default function LeadScraper() {
 
         {composedQuery && (
           <div className="text-xs sm:text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg border">
-            <div className="font-medium mb-1">Search Query:</div>
+            <div className="font-medium mb-1">
+              {searchStrategy === "google" ? "Google Search Query:" : "Instagram Keywords:"}
+            </div>
             <code className="text-xs break-all">{composedQuery}</code>
+            <div className="text-xs mt-1 opacity-75">
+              {searchStrategy === "google" 
+                ? "Searching Google for Instagram profiles"
+                : "Searching for Instagram users"
+              }
+            </div>
           </div>
         )}
 
@@ -318,7 +484,11 @@ export default function LeadScraper() {
           <div className="p-3 sm:p-4 border-b">
             <h2 className="text-base sm:text-lg font-medium">Results</h2>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              Showing Google results filtered to Instagram.{enrichProfiles && " Profile data enriched when available."}
+              {searchStrategy === "google" 
+                ? "Showing Google results filtered to Instagram." 
+                : "Showing Instagram users found by keyword search."
+              }
+              {enrichProfiles && " Profile data enriched when available."}
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
@@ -326,6 +496,13 @@ export default function LeadScraper() {
               </span>
               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
                 Limit: {limit}
+              </span>
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                searchStrategy === "google" 
+                  ? "text-blue-600 bg-blue-50" 
+                  : "text-purple-600 bg-purple-50"
+              }`}>
+                {searchStrategy === "google" ? "🔍 Google Search" : "📸 Instagram Search"}
               </span>
               {enrichProfiles && (
                 <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">

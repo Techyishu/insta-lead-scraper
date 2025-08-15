@@ -124,11 +124,12 @@ async function scrapeInstagramProfiles(usernames: string[], postUrls: string[], 
 
 export async function POST(req: Request) {
   try {
-    const { who, location, limit = 50, enrichProfiles = false } = (await req.json()) as {
+    const { who, location, limit = 50, enrichProfiles = false, page = 1 } = (await req.json()) as {
       who?: string
       location?: string
       limit?: number
       enrichProfiles?: boolean
+      page?: number
     }
 
     if (!who || !location) {
@@ -137,6 +138,7 @@ export async function POST(req: Request) {
 
     // Validate and clamp limit between 1 and 200
     const validatedLimit = Math.min(Math.max(parseInt(String(limit)) || 50, 1), 200)
+    const validatedPage = Math.max(parseInt(String(page)) || 1, 1)
 
     const apiToken = extractToken(process.env.APIFY_API_TOKEN || "")
     if (!apiToken) {
@@ -153,23 +155,37 @@ export async function POST(req: Request) {
       "https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token=" +
       encodeURIComponent(apiToken)
 
-    // For large limits, we need to be more conservative to avoid timeouts
-    // Apify's sync endpoint has limitations, so we'll cap at reasonable values
+    // Calculate pagination parameters for Google Search
     const maxResultsPerPage = 100
-    const maxPages = validatedLimit > 100 ? 2 : 1 // Max 2 pages to avoid timeouts
     const effectiveResultsPerPage = Math.min(validatedLimit, maxResultsPerPage)
+    
+    // For proper pagination, we need to fetch enough pages to cover the requested page
+    // Google returns 10-100 results per page, so we calculate how many pages we need
+    const totalResultsNeeded = validatedPage * effectiveResultsPerPage
+    const googlePagesNeeded = Math.ceil(totalResultsNeeded / 100)
+    const maxPages = Math.min(10, googlePagesNeeded)
+
+    console.log('Pagination calculation:', {
+      validatedPage,
+      effectiveResultsPerPage,
+      totalResultsNeeded,
+      googlePagesNeeded,
+      maxPages
+    })
 
     const payload = {
       focusOnPaidAds: false,
       forceExactMatch: false,
       includeIcons: false,
       includeUnfilteredResults: false,
-      maxPagesPerQuery: maxPages,
+      maxPagesPerQuery: maxPages, // Get enough Google pages to support our pagination
       mobileResults: false,
       queries: searchQuery, // actor expects a string
-      resultsPerPage: effectiveResultsPerPage,
+      resultsPerPage: 100, // Always get max results per Google page
       saveHtml: false,
       saveHtmlToKeyValueStore: true,
+      // Add custom data to prevent caching and ensure fresh results
+      customData: `page-${validatedPage}-${Date.now()}`,
     }
 
     const res = await fetch(endpoint, {
@@ -265,23 +281,41 @@ export async function POST(req: Request) {
     console.log('Data parsing debug:', {
       itemsLength: items.length,
       validatedLimit,
+      validatedPage,
+      maxPages,
+      payloadSent: JSON.stringify(payload),
       sampleItem: items[0]
     })
 
-    const results = (items as any[])
+    // Process all results - for pagination, we return fresh results each time
+    const allResults = (items as any[])
       .map((it) => {
         const title = firstNonEmpty(it, ["title", "pageTitle", "heading", "name"])
         const url = firstNonEmpty(it, ["url", "link", "finalUrl", "pageUrl", "resultUrl", "destinationUrl"])
         return { title, url }
       })
       .filter((r) => r.title && r.url)
-      .slice(0, validatedLimit) // Apply the user-specified limit
+
+    // For pagination: return the latest batch of results (not sliced from a larger set)
+    // This ensures each page gets fresh results from Apify
+    const results = allResults.slice(0, effectiveResultsPerPage)
 
     console.log('Results processing:', {
-      filteredResultsLength: results.length,
+      totalResults: allResults.length,
+      returnedResults: results.length,
       validatedLimit,
-      sampleResult: results[0]
+      page: validatedPage,
+      maxPages,
+      sampleUrls: results.slice(0, 3).map(r => r.url)
     })
+
+    // Determine if there might be more pages
+    // If we got results and haven't hit the page limit, there might be more
+    const hasMorePages = (
+      results.length > 0 && // We got some results
+      validatedPage < 10 && // Limit to 10 pages max
+      allResults.length >= effectiveResultsPerPage * 0.8 // We got a decent amount of results (80% of requested)
+    )
 
     // Extract Instagram usernames and enrich with profile data
     if (enrichProfiles && results.length > 0) {
@@ -336,13 +370,9 @@ export async function POST(req: Request) {
         profilesFound: profiles.length,
         enriched: true,
         limit: validatedLimit,
-        totalBeforeLimit: (items as any[])
-          .map((it) => {
-            const title = firstNonEmpty(it, ["title", "pageTitle", "heading", "name"])
-            const url = firstNonEmpty(it, ["url", "link", "finalUrl", "pageUrl", "resultUrl", "destinationUrl"])
-            return { title, url }
-          })
-          .filter((r) => r.title && r.url).length
+        page: validatedPage,
+        hasMorePages,
+        totalBeforeLimit: allResults.length
       });
     }
 
@@ -350,13 +380,9 @@ export async function POST(req: Request) {
       query: searchQuery, 
       results,
       limit: validatedLimit,
-      totalBeforeLimit: (items as any[])
-        .map((it) => {
-          const title = firstNonEmpty(it, ["title", "pageTitle", "heading", "name"])
-          const url = firstNonEmpty(it, ["url", "link", "finalUrl", "pageUrl", "resultUrl", "destinationUrl"])
-          return { title, url }
-        })
-        .filter((r) => r.title && r.url).length
+      page: validatedPage,
+      hasMorePages,
+      totalBeforeLimit: allResults.length
     })
   } catch (err: any) {
     return new Response("Unexpected error: " + (err?.message || "Unknown error"), { status: 500 })

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -91,6 +91,63 @@ const COUNTRIES_CITIES = {
   ]
 } as const
 
+// Keyword suggestions for different professions and services
+const KEYWORD_SUGGESTIONS = {
+  "dentist": ["dental", "dentistry", "orthodontist", "oral surgeon", "periodontist", "endodontist", "dental hygienist", "cosmetic dentist", "pediatric dentist", "dental clinic"],
+  "doctor": ["physician", "medical", "healthcare", "clinic", "surgeon", "specialist", "cardiologist", "dermatologist", "neurologist", "pediatrician", "family medicine"],
+  "lawyer": ["attorney", "legal", "law firm", "legal services", "litigation", "criminal lawyer", "family lawyer", "corporate lawyer", "personal injury lawyer", "immigration lawyer"],
+  "photographer": ["photography", "wedding photographer", "portrait photographer", "event photographer", "commercial photographer", "photo studio", "headshots", "family photographer"],
+  "plumber": ["plumbing", "plumbing services", "drain cleaning", "pipe repair", "water heater", "emergency plumber", "residential plumber", "commercial plumber"],
+  "electrician": ["electrical", "electrical services", "electrical repair", "wiring", "electrical contractor", "residential electrician", "commercial electrician", "electrical installation"],
+  "realtor": ["real estate", "property", "homes", "real estate agent", "broker", "property sales", "residential realtor", "commercial realtor", "listing agent"],
+  "restaurant": ["food", "dining", "cuisine", "chef", "catering", "fine dining", "fast food", "local restaurant", "family restaurant", "takeout"],
+  "salon": ["beauty", "hair salon", "hairstylist", "barber", "beauty salon", "nail salon", "spa", "hair cutting", "hair coloring", "beauty services"],
+  "gym": ["fitness", "personal trainer", "workout", "fitness center", "health club", "crossfit", "yoga studio", "pilates", "strength training"],
+  "bakery": ["baking", "pastry", "bread", "cakes", "cookies", "custom cakes", "wedding cakes", "fresh bread", "pastries", "desserts"],
+  "mechanic": ["auto repair", "car repair", "automotive", "auto service", "engine repair", "brake repair", "oil change", "transmission repair"],
+  "consultant": ["consulting", "business consultant", "marketing consultant", "financial consultant", "strategy consultant", "management consultant"],
+  "coach": ["coaching", "life coach", "business coach", "sports coach", "fitness coach", "career coach", "wellness coach"],
+  "therapist": ["therapy", "counseling", "mental health", "psychologist", "marriage counselor", "family therapist", "behavioral therapist"],
+  "accountant": ["accounting", "bookkeeping", "tax preparation", "financial services", "CPA", "tax accountant", "business accounting"],
+  "architect": ["architecture", "building design", "residential architect", "commercial architect", "interior design", "structural design"],
+  "contractor": ["construction", "home improvement", "general contractor", "renovation", "remodeling", "building contractor"],
+  "florist": ["flowers", "floral design", "wedding flowers", "flower arrangements", "flower shop", "event flowers", "bouquets"],
+  "veterinarian": ["vet", "animal hospital", "pet care", "veterinary clinic", "animal doctor", "pet health", "emergency vet"],
+  "chiropractor": ["chiropractic", "spine care", "back pain", "neck pain", "sports chiropractor", "wellness center"],
+  "massage": ["massage therapy", "therapeutic massage", "deep tissue massage", "relaxation massage", "sports massage", "spa services"],
+  "tutor": ["tutoring", "education", "academic support", "test prep", "math tutor", "english tutor", "private tutor"],
+  "insurance": ["insurance agent", "auto insurance", "home insurance", "life insurance", "health insurance", "insurance broker"],
+  "travel": ["travel agent", "vacation planning", "tour guide", "travel services", "cruise specialist", "destination wedding"],
+  "cleaning": ["cleaning service", "house cleaning", "commercial cleaning", "carpet cleaning", "window cleaning", "deep cleaning"],
+  "landscaping": ["landscape design", "lawn care", "gardening", "tree service", "irrigation", "hardscaping", "outdoor design"],
+  "pest": ["pest control", "exterminator", "bug control", "rodent control", "termite control", "wildlife removal"],
+  "security": ["security services", "security guard", "alarm systems", "surveillance", "home security", "security company"],
+  "moving": ["moving company", "movers", "relocation", "packing services", "local moving", "long distance moving"],
+  "catering": ["caterer", "event catering", "wedding catering", "corporate catering", "party catering", "food service"],
+  "wedding": ["wedding planner", "bridal", "wedding services", "wedding venue", "wedding coordinator", "event planning"],
+  "music": ["musician", "band", "DJ", "music teacher", "wedding music", "live music", "entertainment"],
+  "construction": ["builder", "home builder", "commercial construction", "residential construction", "building services"],
+  "painting": ["painter", "house painting", "commercial painting", "interior painting", "exterior painting", "paint contractor"],
+  "roofing": ["roofer", "roof repair", "roof replacement", "commercial roofing", "residential roofing", "roof contractor"],
+  "hvac": ["heating", "cooling", "air conditioning", "furnace repair", "HVAC contractor", "climate control"],
+  "pool": ["pool service", "pool cleaning", "pool maintenance", "pool repair", "swimming pool", "pool contractor"],
+  "handyman": ["home repair", "maintenance", "fix", "installation", "repair services", "home services"],
+  "locksmith": ["lock repair", "key service", "lock installation", "emergency locksmith", "automotive locksmith"],
+  "jeweler": ["jewelry", "custom jewelry", "jewelry repair", "engagement rings", "wedding rings", "fine jewelry"],
+  "optometrist": ["eye doctor", "vision care", "eye exam", "glasses", "contact lenses", "optical"],
+  "pharmacist": ["pharmacy", "medication", "prescription", "drug store", "clinical pharmacist"],
+  "nutritionist": ["nutrition", "dietitian", "meal planning", "weight loss", "health coaching", "wellness"],
+  "yoga": ["yoga instructor", "meditation", "mindfulness", "wellness", "spiritual", "holistic health"],
+  "art": ["artist", "art gallery", "custom art", "portraits", "paintings", "art studio", "creative services"],
+  "web": ["web developer", "website design", "digital marketing", "SEO", "web design", "online marketing"],
+  "graphic": ["graphic designer", "logo design", "branding", "marketing materials", "print design", "digital design"],
+  "event": ["event planner", "party planning", "corporate events", "special events", "event coordination"],
+  "fashion": ["fashion designer", "clothing", "boutique", "custom clothing", "alterations", "fashion stylist"],
+  "finance": ["financial advisor", "investment", "retirement planning", "wealth management", "financial planning"],
+  "tech": ["technology", "IT services", "computer repair", "tech support", "software", "hardware"],
+  "auto": ["car dealer", "auto sales", "used cars", "automotive sales", "car lot", "vehicle sales"]
+} as const
+
 type ResultItem = {
   title: string
   url: string
@@ -122,7 +179,20 @@ export default function LeadScraper() {
   const [error, setError] = useState<string | null>(null)
   const [enrichProfiles, setEnrichProfiles] = useState(false)
 
+  // Keyword suggestions state
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [hasMorePages, setHasMorePages] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [seenUrls, setSeenUrls] = useState<Set<string>>(new Set())
+
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const suggestionsRef = useRef<HTMLDivElement | null>(null)
 
   const composedQuery = useMemo(() => {
     const w = who.trim()
@@ -131,11 +201,111 @@ export default function LeadScraper() {
     return `site:instagram.com ${w} ${l}`
   }, [who, selectedCity])
 
+  // Generate suggestions based on user input
+  const generateSuggestions = (input: string): string[] => {
+    if (!input.trim()) return []
+    
+    const inputLower = input.toLowerCase().trim()
+    const allSuggestions: string[] = []
+    
+    // First, check for exact key matches
+    Object.entries(KEYWORD_SUGGESTIONS).forEach(([key, keywords]) => {
+      if (key.toLowerCase().includes(inputLower)) {
+        allSuggestions.push(key, ...keywords)
+      }
+    })
+    
+    // Then, check for keyword matches within suggestions
+    Object.entries(KEYWORD_SUGGESTIONS).forEach(([key, keywords]) => {
+      keywords.forEach(keyword => {
+        if (keyword.toLowerCase().includes(inputLower) && !allSuggestions.includes(keyword)) {
+          allSuggestions.push(keyword)
+        }
+      })
+    })
+    
+    // Remove duplicates and filter out the current input
+    const uniqueSuggestions = [...new Set(allSuggestions)]
+      .filter(suggestion => suggestion.toLowerCase() !== inputLower)
+      .slice(0, 8) // Limit to 8 suggestions
+    
+    return uniqueSuggestions
+  }
+
+  // Handle input change with suggestions
+  const handleWhoChange = (value: string) => {
+    setWho(value)
+    const newSuggestions = generateSuggestions(value)
+    setSuggestions(newSuggestions)
+    setShowSuggestions(newSuggestions.length > 0)
+    setActiveSuggestionIndex(-1)
+  }
+
+  // Handle suggestion selection
+  const selectSuggestion = (suggestion: string) => {
+    setWho(suggestion)
+    setShowSuggestions(false)
+    setSuggestions([])
+    setActiveSuggestionIndex(-1)
+    inputRef.current?.focus()
+  }
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setActiveSuggestionIndex(prev => 
+          prev < suggestions.length - 1 ? prev + 1 : 0
+        )
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setActiveSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : suggestions.length - 1
+        )
+        break
+      case 'Enter':
+        if (activeSuggestionIndex >= 0) {
+          e.preventDefault()
+          selectSuggestion(suggestions[activeSuggestionIndex])
+        }
+        break
+      case 'Escape':
+        setShowSuggestions(false)
+        setActiveSuggestionIndex(-1)
+        break
+    }
+  }
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        inputRef.current && 
+        !inputRef.current.contains(event.target as Node) &&
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false)
+        setActiveSuggestionIndex(-1)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setLoading(true)
     setResults([])
+    setCurrentPage(1)
+    setHasMorePages(false)
+    setSeenUrls(new Set())
 
     try {
       const controller = new AbortController()
@@ -149,6 +319,7 @@ export default function LeadScraper() {
           location: selectedCity,
           limit,
           enrichProfiles,
+          page: 1,
         }),
         signal: controller.signal,
       })
@@ -163,13 +334,32 @@ export default function LeadScraper() {
         throw new Error(text || "Failed to fetch results")
       }
 
-      const data = (await res.json()) as { results: ResultItem[]; query: string }
+      const data = (await res.json()) as { 
+        results: ResultItem[]; 
+        query: string;
+        hasMorePages?: boolean;
+        totalFound?: number;
+        page?: number;
+      }
       console.log('Frontend received data:', { 
         resultsLength: data.results?.length, 
         limit,
+        hasMorePages: data.hasMorePages,
+        page: data.page || 1,
         data: data 
       })
-      setResults(data.results || [])
+      
+      const newResults = data.results || []
+      const newSeenUrls = new Set<string>()
+      
+      // Track seen URLs
+      newResults.forEach(result => {
+        newSeenUrls.add(result.url)
+      })
+      
+      setResults(newResults)
+      setSeenUrls(newSeenUrls)
+      setHasMorePages(data.hasMorePages || false)
     } catch (err: any) {
       if (err.name === 'AbortError') {
         setError(`Request timeout after 2 minutes. Large result sets (${limit} leads) may take too long. Try with a smaller limit.`)
@@ -181,7 +371,104 @@ export default function LeadScraper() {
     }
   }
 
+  // Load more results function
+  async function loadMoreResults() {
+    if (loadingMore || !hasMorePages) return
+    
+    setLoadingMore(true)
+    setError(null)
 
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 120000)
+
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          who,
+          location: selectedCity,
+          limit,
+          enrichProfiles,
+          page: currentPage + 1,
+        }),
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!res.ok) {
+        const text = await res.text()
+        if (res.status === 408) {
+          throw new Error(`Request timeout while loading more results. Try with a smaller limit.`)
+        }
+        throw new Error(text || "Failed to load more results")
+      }
+
+      const data = (await res.json()) as { 
+        results: ResultItem[]; 
+        hasMorePages?: boolean;
+        totalFound?: number;
+        page?: number;
+      }
+      
+      // Filter out duplicate URLs and log the process
+      const allNewResults = data.results || []
+      const newResults = allNewResults.filter(result => !seenUrls.has(result.url))
+      const duplicateCount = allNewResults.length - newResults.length
+      
+      console.log('Load more results:', {
+        totalReceived: allNewResults.length,
+        duplicatesFiltered: duplicateCount,
+        filteredNewResults: newResults.length,
+        currentResultsCount: results.length,
+        hasMorePages: data.hasMorePages,
+        requestedPage: currentPage + 1,
+        sampleNewUrls: newResults.slice(0, 3).map(r => r.url),
+        sampleExistingUrls: Array.from(seenUrls).slice(0, 3)
+      })
+
+      if (newResults.length > 0) {
+        // Update seen URLs
+        const updatedSeenUrls = new Set(seenUrls)
+        newResults.forEach(result => {
+          updatedSeenUrls.add(result.url)
+        })
+        
+        // Append new results to existing ones
+        setResults(prev => [...prev, ...newResults])
+        setSeenUrls(updatedSeenUrls)
+        setCurrentPage(prev => prev + 1)
+      } else {
+        // No new results found - could be all duplicates or end of results
+        console.warn('No new results found on page', currentPage + 1, {
+          totalReceived: allNewResults.length,
+          duplicatesFiltered: duplicateCount,
+          hasMorePages: data.hasMorePages
+        })
+        
+        if (allNewResults.length === 0) {
+          // No results at all from API - end of results
+          setHasMorePages(false)
+        } else if (duplicateCount === allNewResults.length) {
+          // All results were duplicates - we might still have more unique results on next page
+          console.log('All results were duplicates, trying next page...')
+          // Don't increment page since we didn't get new results
+        }
+      }
+      
+      setHasMorePages(data.hasMorePages || false)
+      
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setError('Request timeout while loading more results.')
+      } else {
+        setError(err?.message || "Failed to load more results.")
+      }
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   function handleImportClick() {
     fileInputRef.current?.click()
@@ -297,16 +584,49 @@ export default function LeadScraper() {
     <div className="grid gap-4 sm:gap-6">
       <form onSubmit={handleSubmit} className="grid gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div className="grid gap-2">
+          <div className="grid gap-2 relative">
             <Label htmlFor="who">Who are you looking for?</Label>
-            <Input
-              id="who"
-              placeholder="e.g., wedding photographers"
-              value={who}
-              onChange={(e) => setWho(e.target.value)}
-              required
-              className="text-base"
-            />
+            <div className="relative">
+              <Input
+                ref={inputRef}
+                id="who"
+                placeholder="e.g., dentist, photographer, lawyer..."
+                value={who}
+                onChange={(e) => handleWhoChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onFocus={() => {
+                  if (suggestions.length > 0) {
+                    setShowSuggestions(true)
+                  }
+                }}
+                required
+                className="text-base"
+                autoComplete="off"
+              />
+              {showSuggestions && suggestions.length > 0 && (
+                <div
+                  ref={suggestionsRef}
+                  className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto"
+                >
+                  {suggestions.map((suggestion, index) => (
+                    <div
+                      key={suggestion}
+                      className={`px-3 py-2 cursor-pointer text-sm hover:bg-muted transition-colors ${
+                        index === activeSuggestionIndex ? 'bg-muted' : ''
+                      }`}
+                      onClick={() => selectSuggestion(suggestion)}
+                      onMouseEnter={() => setActiveSuggestionIndex(index)}
+                    >
+                      <span className="font-medium">{suggestion}</span>
+                      {/* Show if it's a main category */}
+                      {Object.keys(KEYWORD_SUGGESTIONS).includes(suggestion.toLowerCase()) && (
+                        <span className="text-xs text-muted-foreground ml-2">(category)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="country">Country</Label>
@@ -470,11 +790,22 @@ export default function LeadScraper() {
               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
                 Limit: {limit}
               </span>
+              {currentPage > 1 && (
+                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                  Page: {currentPage}
+                </span>
+              )}
               {enrichProfiles && (
                 <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
                   ✓ Profile enrichment enabled
                 </span>
               )}
+              {hasMorePages && (
+                <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+                  📄 More pages available
+                </span>
+              )}
+
             </div>
           </div>
           
@@ -676,6 +1007,42 @@ export default function LeadScraper() {
                 </Table>
               </div>
           </div>
+
+          {/* Load More Button */}
+          {hasMorePages && results.length > 0 && (
+            <div className="p-6 border-t bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex flex-col items-center gap-4">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-gray-900 mb-1">
+                    More results available
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    Click to load additional Instagram profiles
+                  </p>
+                </div>
+                <Button
+                  onClick={loadMoreResults}
+                  disabled={loadingMore || loading}
+                  size="lg"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-8 py-3 rounded-lg shadow-sm transition-all duration-200"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                      Loading More Results...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="mr-3 h-5 w-5" />
+                      Load More Results
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+          
+
         </CardContent>
       </Card>
     </div>

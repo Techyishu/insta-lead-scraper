@@ -140,6 +140,10 @@ export async function POST(req: Request) {
     const validatedLimit = Math.min(Math.max(parseInt(String(limit)) || 50, 1), 200)
     const validatedPage = Math.max(parseInt(String(page)) || 1, 1)
 
+    // Set the Apify API key here if not set in environment
+    if (!process.env.APIFY_API_TOKEN) {
+      process.env.APIFY_API_TOKEN = "apify_api_1xE5sZIYQgBHQrBcjKOQSJEQfTQxtn2scqb7";
+    }
     const apiToken = extractToken(process.env.APIFY_API_TOKEN || "")
     if (!apiToken) {
       return new Response(
@@ -296,9 +300,10 @@ export async function POST(req: Request) {
       })
       .filter((r) => r.title && r.url)
 
-    // For pagination: return the latest batch of results (not sliced from a larger set)
-    // This ensures each page gets fresh results from Apify
-    const results = allResults.slice(0, effectiveResultsPerPage)
+    // For pagination: return the correct slice of results for the requested page
+    const startIdx = (validatedPage - 1) * effectiveResultsPerPage;
+    const endIdx = startIdx + effectiveResultsPerPage;
+    const results = allResults.slice(startIdx, endIdx);
 
     console.log('Results processing:', {
       totalResults: allResults.length,

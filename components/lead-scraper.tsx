@@ -1233,7 +1233,21 @@ export default function LeadScraper() {
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMorePages, setHasMorePages] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [seenUrls, setSeenUrls] = useState<Set<string>>(new Set())
+  const [seenUsernames, setSeenUsernames] = useState<Set<string>>(() => {
+    // Load seen Usernames from localStorage on component mount
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('lead-scraper-seen-usernames')
+        if (saved) {
+          return new Set(JSON.parse(saved))
+        }
+      } catch (error) {
+        console.warn('Failed to load seen Usernames from localStorage:', error)
+      }
+    }
+    return new Set()
+  })
+  const [duplicatesFiltered, setDuplicatesFiltered] = useState(0)
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -1343,6 +1357,92 @@ export default function LeadScraper() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Save seen Usernames to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && seenUsernames.size > 0) {
+      try {
+        localStorage.setItem('lead-scraper-seen-usernames', JSON.stringify(Array.from(seenUsernames)))
+      } catch (error) {
+        console.warn('Failed to save seen Usernames to localStorage:', error)
+      }
+    }
+  }, [seenUsernames])
+
+  // Function to extract Instagram username from a URL
+  const extractInstagramUsername = (url: string): string | null => {
+    try {
+      // Remove query params and fragments
+      const cleanUrl = url.split('?')[0].split('#')[0]
+      // Match profile or post URLs
+      // Examples:
+      // https://www.instagram.com/username/
+      // https://instagram.com/username
+      // https://www.instagram.com/username/p/POSTID
+      // https://www.instagram.com/username/reel/REELID
+      // https://www.instagram.com/username/channel/CHANNELID
+      // https://www.instagram.com/username/tagged/
+      // https://www.instagram.com/p/POSTID
+      // https://www.instagram.com/reel/REELID
+      // We want to extract 'username' from profile and post URLs
+      const match = cleanUrl.match(/instagram\.com\/(?!p\/|reel\/|tv\/|explore\/|stories\/|directory\/|about\/|developer\/|press\/|blog\/|about\/|legal\/|privacy\/|terms\/|accounts\/|challenge\/|create\/|email\/|api\/|business\/|directory\/|topics\/|tags\/|hashtag\/|web\/|a\/|n\/|s\/|t\/|v\/|z\/|\d+)([A-Za-z0-9_.]+)(?:\/|$)/)
+      if (match && match[1]) {
+        return match[1].toLowerCase()
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  // Helper to check if a URL is a profile (not post, reel, tv, stories, etc)
+  const isInstagramProfileUrl = (url: string) => {
+    const cleanUrl = url.split('?')[0].split('#')[0]
+    // Matches only profile URLs: https://instagram.com/username or https://instagram.com/username/
+    // Excludes: /p/, /reel/, /tv/, /stories/, /channel/, /tagged/, etc
+    return /instagram\.com\/[A-Za-z0-9_.]+\/?$/.test(cleanUrl)
+  }
+
+  // Improved duplicate filtering: only one result per Instagram username (profile URLs only)
+  const filterDuplicates = (newResults: ResultItem[], existingUsernames: Set<string> = new Set()) => {
+    const filteredResults: ResultItem[] = []
+    const seenUsernames = new Set(existingUsernames)
+    let duplicateCount = 0
+
+    for (const result of newResults) {
+      // Filter out post, reel, tv, stories, channel, tagged, etc
+      if (!isInstagramProfileUrl(result.url)) {
+        duplicateCount++
+        continue
+      }
+      const username = result.username?.toLowerCase() || extractInstagramUsername(result.url)
+      if (!username) {
+        // If we can't extract a username, treat as unique (or optionally skip)
+        filteredResults.push(result)
+        continue
+      }
+      if (!seenUsernames.has(username)) {
+        filteredResults.push(result)
+        seenUsernames.add(username)
+      } else {
+        duplicateCount++
+      }
+    }
+    return { filteredResults, duplicateCount, updatedUsernames: seenUsernames }
+  }
+
+  // Function to clear the duplicate history
+  const clearDuplicateHistory = () => {
+    setSeenUsernames(new Set())
+    setDuplicatesFiltered(0)
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('lead-scraper-seen-usernames')
+      } catch (error) {
+        console.warn('Failed to clear seen Usernames from localStorage:', error)
+      }
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -1350,7 +1450,8 @@ export default function LeadScraper() {
     setResults([])
     setCurrentPage(1)
     setHasMorePages(false)
-    setSeenUrls(new Set())
+    setSeenUsernames(new Set())
+    setDuplicatesFiltered(0)
 
     try {
       const controller = new AbortController()
@@ -1394,16 +1495,20 @@ export default function LeadScraper() {
         data: data 
       })
       
-      const newResults = data.results || []
-      const newSeenUrls = new Set<string>()
+      const rawResults = data.results || []
       
-      // Track seen URLs
-      newResults.forEach(result => {
-        newSeenUrls.add(result.url)
+      // Filter duplicates from initial results
+      const { filteredResults, duplicateCount, updatedUsernames } = filterDuplicates(rawResults)
+      
+      console.log('Initial search results filtering:', {
+        totalReceived: rawResults.length,
+        duplicatesFiltered: duplicateCount,
+        uniqueResults: filteredResults.length
       })
       
-      setResults(newResults)
-      setSeenUrls(newSeenUrls)
+      setResults(filteredResults)
+      setSeenUsernames(updatedUsernames)
+      setDuplicatesFiltered(duplicateCount)
       setHasMorePages(data.hasMorePages || false)
     } catch (err: any) {
       if (err.name === 'AbortError') {
@@ -1457,10 +1562,9 @@ export default function LeadScraper() {
         page?: number;
       }
       
-      // Filter out duplicate URLs and log the process
+      // Filter out duplicate URLs using the new filtering function
       const allNewResults = data.results || []
-      const newResults = allNewResults.filter(result => !seenUrls.has(result.url))
-      const duplicateCount = allNewResults.length - newResults.length
+      const { filteredResults: newResults, duplicateCount, updatedUsernames } = filterDuplicates(allNewResults, new Set(seenUsernames))
       
       console.log('Load more results:', {
         totalReceived: allNewResults.length,
@@ -1469,20 +1573,15 @@ export default function LeadScraper() {
         currentResultsCount: results.length,
         hasMorePages: data.hasMorePages,
         requestedPage: currentPage + 1,
-        sampleNewUrls: newResults.slice(0, 3).map(r => r.url),
-        sampleExistingUrls: Array.from(seenUrls).slice(0, 3)
+        sampleNewUsernames: newResults.slice(0, 3).map(r => r.username),
+        sampleExistingUsernames: Array.from(seenUsernames).slice(0, 3)
       })
 
       if (newResults.length > 0) {
-        // Update seen URLs
-        const updatedSeenUrls = new Set(seenUrls)
-        newResults.forEach(result => {
-          updatedSeenUrls.add(result.url)
-        })
-        
         // Append new results to existing ones
         setResults(prev => [...prev, ...newResults])
-        setSeenUrls(updatedSeenUrls)
+        setSeenUsernames(updatedUsernames)
+        setDuplicatesFiltered(prev => prev + duplicateCount)
         setCurrentPage(prev => prev + 1)
       } else {
         // No new results found - could be all duplicates or end of results
@@ -1498,6 +1597,7 @@ export default function LeadScraper() {
         } else if (duplicateCount === allNewResults.length) {
           // All results were duplicates - we might still have more unique results on next page
           console.log('All results were duplicates, trying next page...')
+          setDuplicatesFiltered(prev => prev + duplicateCount)
           // Don't increment page since we didn't get new results
         }
       }
@@ -1605,7 +1705,28 @@ export default function LeadScraper() {
       }
 
       const normalized = normalizeItems(items)
-      setResults(normalized)
+      
+      // Filter duplicates from imported results  
+      const { filteredResults, duplicateCount } = filterDuplicates(normalized)
+      
+      console.log('Import results filtering:', {
+        totalImported: normalized.length,
+        duplicatesFiltered: duplicateCount,
+        uniqueResults: filteredResults.length
+      })
+      
+      setResults(filteredResults)
+      setDuplicatesFiltered(duplicateCount)
+      
+      // Update seen Usernames
+      const newSeenUsernames = new Set<string>()
+      filteredResults.forEach(result => {
+        const username = result.username?.toLowerCase() || extractInstagramUsername(result.url)
+        if (username) {
+          newSeenUsernames.add(username)
+        }
+      })
+      setSeenUsernames(newSeenUsernames)
     } catch (err: any) {
       setError("Invalid JSON file. Please provide a valid Apify dataset JSON.")
     } finally {
@@ -1805,6 +1926,20 @@ export default function LeadScraper() {
               <span className="hidden sm:inline">Download CSV</span>
               <span className="sm:hidden">Download</span>
             </Button>
+            
+            {seenUsernames.size > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearDuplicateHistory}
+                className="w-full sm:w-auto bg-transparent text-yellow-700 border-yellow-300 hover:bg-yellow-50"
+                title={`Clear duplicate history (${seenUsernames.size} Usernames tracked)`}
+              >
+                <span className="mr-2">🔄</span>
+                <span className="hidden sm:inline">Clear Duplicates ({seenUsernames.size})</span>
+                <span className="sm:hidden">Clear ({seenUsernames.size})</span>
+              </Button>
+            )}
           </div>
         </div>
       </form>
@@ -1839,6 +1974,11 @@ export default function LeadScraper() {
               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
                 Limit: {limit}
               </span>
+              {duplicatesFiltered > 0 && (
+                <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded-full border border-yellow-200">
+                  🔄 {duplicatesFiltered} duplicates filtered
+                </span>
+              )}
               {currentPage > 1 && (
                 <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
                   Page: {currentPage}
@@ -2056,41 +2196,6 @@ export default function LeadScraper() {
                 </Table>
               </div>
           </div>
-
-          {/* Load More Button */}
-          {hasMorePages && results.length > 0 && (
-            <div className="p-6 border-t bg-gradient-to-r from-blue-50 to-indigo-50">
-              <div className="flex flex-col items-center gap-4">
-                <div className="text-center">
-                  <p className="text-sm font-medium text-gray-900 mb-1">
-                    More results available
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    Click to load additional Instagram profiles
-                  </p>
-                </div>
-                <Button
-                  onClick={loadMoreResults}
-                  disabled={loadingMore || loading}
-                  size="lg"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-8 py-3 rounded-lg shadow-sm transition-all duration-200"
-                >
-                  {loadingMore ? (
-                    <>
-                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                      Loading More Results...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="mr-3 h-5 w-5" />
-                      Load More Results
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-          
 
         </CardContent>
       </Card>

@@ -1385,7 +1385,6 @@ export default function LeadScraper() {
   const [results, setResults] = useState<ResultItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [enrichProfiles, setEnrichProfiles] = useState(false)
 
   // Keyword suggestions state
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -1627,7 +1626,6 @@ export default function LeadScraper() {
           who,
           location: selectedCity,
           limit,
-          enrichProfiles,
           page: 1,
         }),
         signal: controller.signal,
@@ -1702,7 +1700,6 @@ export default function LeadScraper() {
           who,
           location: selectedCity,
           limit,
-          enrichProfiles,
           page: currentPage + 1,
         }),
         signal: controller.signal,
@@ -1786,9 +1783,7 @@ export default function LeadScraper() {
     if (results.length === 0) return
 
     // Create CSV content
-    const headers = enrichProfiles 
-      ? ['Name/Title', 'URL', 'Username', 'Full Name', 'Followers', 'Email', 'Phone', 'Website']
-      : ['Name/Title', 'URL'];
+    const headers = ['Name/Title', 'URL'];
       
     const csvContent = [
       headers.join(','),
@@ -1797,18 +1792,6 @@ export default function LeadScraper() {
           `"${result.title.replace(/"/g, '""')}"`,
           `"${result.url}"`
         ];
-        
-        if (enrichProfiles) {
-          return [
-            ...basicData,
-            `"${result.username || ''}"`,
-            `"${result.fullName || ''}"`,
-            `"${result.followers || ''}"`,
-            `"${result.contactInfo?.email || ''}"`,
-            `"${result.contactInfo?.phone || ''}"`,
-            `"${result.externalUrl || ''}"`
-          ].join(',');
-        }
         
         return basicData.join(',');
       })
@@ -2023,23 +2006,6 @@ export default function LeadScraper() {
 
 
 
-        <div className="flex items-start space-x-2 p-3 bg-muted/30 rounded-lg border">
-          <input
-            id="enrichProfiles"
-            type="checkbox"
-            checked={enrichProfiles}
-            onChange={(e) => setEnrichProfiles(e.target.checked)}
-            className="h-4 w-4 mt-0.5 flex-shrink-0"
-          />
-          <div className="space-y-1">
-            <Label htmlFor="enrichProfiles" className="text-sm font-medium cursor-pointer">
-              Enrich with Instagram profile data
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Get detailed profiles including follower counts, contact info, and websites
-            </p>
-          </div>
-        </div>
 
         {composedQuery && (
           <div className="text-xs sm:text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg border">
@@ -2128,7 +2094,6 @@ export default function LeadScraper() {
             <h2 className="text-base sm:text-lg font-medium">Results</h2>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               Showing Google results filtered to Instagram.
-              {enrichProfiles && " Profile data enriched when available."}
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
@@ -2145,11 +2110,6 @@ export default function LeadScraper() {
               {currentPage > 1 && (
                 <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
                   Page: {currentPage}
-                </span>
-              )}
-              {enrichProfiles && (
-                <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                  ✓ Profile enrichment enabled
                 </span>
               )}
               {hasMorePages && (
@@ -2191,8 +2151,6 @@ export default function LeadScraper() {
                           </a>
                         </div>
                       </div>
-                      {enrichProfiles && (
-                        <div className="space-y-2 pt-2 border-t border-muted">
                           {r.username && (
                             <div className="flex flex-wrap items-center gap-2 text-xs">
                               <span className="font-medium">@{r.username}</span>
@@ -2204,46 +2162,6 @@ export default function LeadScraper() {
                               )}
                             </div>
                           )}
-                          
-                          {(r.contactInfo?.email || r.contactInfo?.phone) && (
-                            <div className="space-y-1">
-                              <div className="text-xs font-medium text-muted-foreground">Contact:</div>
-                              <div className="text-xs space-y-1 pl-2">
-                                {r.contactInfo.email && (
-                                  <div className="flex items-center gap-1">
-                                    <span>📧</span>
-                                    <a href={`mailto:${r.contactInfo.email}`} className="underline break-all">
-                                      {r.contactInfo.email}
-                                    </a>
-                                  </div>
-                                )}
-                                {r.contactInfo.phone && (
-                                  <div className="flex items-center gap-1">
-                                    <span>📞</span>
-                                    <a href={`tel:${r.contactInfo.phone}`} className="underline">
-                                      {r.contactInfo.phone}
-                                    </a>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {r.externalUrl && (
-                            <div className="space-y-1">
-                              <div className="text-xs font-medium text-muted-foreground">Website:</div>
-                              <div className="text-xs pl-2">
-                                <div className="flex items-center gap-1">
-                                  <span>🌐</span>
-                                  <a href={r.externalUrl} target="_blank" className="underline break-all hover:text-foreground">
-                                    {r.externalUrl}
-                                  </a>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -2255,109 +2173,48 @@ export default function LeadScraper() {
           <div className="hidden xl:block">
             <div className="max-h-[70vh] overflow-y-auto">
               <Table className="relative w-full table-fixed">
-                  <TableHeader className="sticky top-0 bg-background z-10">
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead className="w-1/2">Name/Title</TableHead>
+                    <TableHead className="w-1/2">URL</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {results.length === 0 && !loading ? (
                     <TableRow>
-                      <TableHead className="w-1/4">Name/Title</TableHead>
-                      <TableHead className="w-1/4">URL</TableHead>
-                      {enrichProfiles && (
-                        <>
-                          <TableHead className="w-1/8">Username</TableHead>
-                          <TableHead className="w-1/12 text-center">Followers</TableHead>
-                          <TableHead className="w-1/6">Contact</TableHead>
-                          <TableHead className="w-1/6">Website</TableHead>
-                        </>
-                      )}
+                      <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
+                        <div className="text-sm">No results yet.</div>
+                        <div className="text-xs mt-1">Try a search above or import a results JSON file.</div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.length === 0 && !loading ? (
-                      <TableRow>
-                        <TableCell colSpan={enrichProfiles ? 6 : 2} className="text-center text-muted-foreground py-8">
-                          <div className="text-sm">No results yet.</div>
-                          <div className="text-xs mt-1">Try a search above or import a results JSON file.</div>
+                  ) : (
+                    Array.isArray(results) && results.map((r, idx) => (
+                      <TableRow key={`${r.url}-${idx}`} className="hover:bg-muted/50">
+                        <TableCell className="align-top py-3">
+                          <div className="space-y-1 overflow-hidden">
+                            <div className="font-medium text-sm leading-tight truncate" title={r.title}>{r.title}</div>
+                            {r.fullName && r.fullName !== r.title && (
+                              <div className="text-xs text-muted-foreground truncate" title={r.fullName}>{r.fullName}</div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="align-top py-3">
+                          <a
+                            href={r.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-foreground underline underline-offset-2 hover:text-primary block truncate"
+                            title={r.url}
+                          >
+                            {r.url}
+                          </a>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      Array.isArray(results) && results.map((r, idx) => (
-                        <TableRow key={`${r.url}-${idx}`} className="hover:bg-muted/50">
-                          <TableCell className="align-top py-3">
-                            <div className="space-y-1 overflow-hidden">
-                              <div className="font-medium text-sm leading-tight truncate" title={r.title}>{r.title}</div>
-                              {r.fullName && r.fullName !== r.title && (
-                                <div className="text-xs text-muted-foreground truncate" title={r.fullName}>{r.fullName}</div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="align-top py-3">
-                            <a
-                              href={r.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-foreground underline underline-offset-2 hover:text-primary block truncate"
-                              title={r.url}
-                            >
-                              {r.url}
-                            </a>
-                          </TableCell>
-                          {enrichProfiles && (
-                            <>
-                              <TableCell className="align-top py-3">
-                                {r.username && (
-                                  <div className="flex items-center gap-1 text-sm overflow-hidden">
-                                    <span className="font-medium truncate" title={`@${r.username}`}>@{r.username}</span>
-                                    {r.verified && <span className="text-blue-500 text-xs flex-shrink-0">✓</span>}
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell className="align-top py-3 text-center">
-                                {r.followers && (
-                                  <div className="text-xs font-medium">
-                                    {r.followers >= 1000000 ? 
-                                      `${(r.followers / 1000000).toFixed(1)}M` :
-                                      r.followers >= 1000 ?
-                                      `${(r.followers / 1000).toFixed(1)}K` :
-                                      r.followers.toLocaleString()
-                                    }
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell className="align-top py-3">
-                                {r.contactInfo && (
-                                  <div className="text-xs space-y-1 overflow-hidden">
-                                    {r.contactInfo.email && (
-                                      <div className="flex items-center gap-1 min-w-0">
-                                        <span className="flex-shrink-0">📧</span>
-                                        <a href={`mailto:${r.contactInfo.email}`} className="underline hover:text-primary truncate" title={r.contactInfo.email}>
-                                          {r.contactInfo.email}
-                                        </a>
-                                      </div>
-                                    )}
-                                    {r.contactInfo.phone && (
-                                      <div className="flex items-center gap-1">
-                                        <span className="flex-shrink-0">📞</span>
-                                        <a href={`tel:${r.contactInfo.phone}`} className="underline hover:text-primary" title={r.contactInfo.phone}>
-                                          {r.contactInfo.phone}
-                                        </a>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell className="align-top py-3">
-                                {r.externalUrl && (
-                                  <a href={r.externalUrl} target="_blank" className="text-xs underline hover:text-primary block truncate" title={r.externalUrl}>
-                                    {r.externalUrl}
-                                  </a>
-                                )}
-                              </TableCell>
-                            </>
-                          )}
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
         </CardContent>

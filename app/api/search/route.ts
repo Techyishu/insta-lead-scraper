@@ -141,9 +141,6 @@ export async function POST(req: Request) {
     const validatedPage = Math.max(parseInt(String(page)) || 1, 1)
 
     // Set the Apify API key here if not set in environment
-    if (!process.env.APIFY_API_TOKEN) {
-      process.env.APIFY_API_TOKEN = "apify_api_1xE5sZIYQgBHQrBcjKOQSJEQfTQxtn2scqb7";
-    }
     const apiToken = extractToken(process.env.APIFY_API_TOKEN || "")
     if (!apiToken) {
       return new Response(

@@ -81,7 +81,52 @@ const COUNTRIES_CITIES = {
     "Vista, California",
     "San Marcos, California",
     "Encinitas, California",
-    "Solana Beach, California"
+    "Solana Beach, California",
+    // Additional strategic US cities
+    "Billings, Montana",
+    "Missoula, Montana",
+    "Rapid City, South Dakota",
+    "Casper, Wyoming",
+    "Cheyenne, Wyoming",
+    "Burlington, Vermont",
+    "Concord, New Hampshire",
+    "Portsmouth, New Hampshire",
+    "Bangor, Maine",
+    "Portland, Maine",
+    "Wilmington, Delaware",
+    "Frederick, Maryland",
+    "Annapolis, Maryland",
+    "Hagerstown, Maryland",
+    "Winchester, Virginia",
+    "Harrisonburg, Virginia",
+    "Lynchburg, Virginia",
+    "Roanoke, Virginia",
+    "Asheville, North Carolina",
+    "Wilmington, North Carolina",
+    "Greenville, North Carolina",
+    "Fayetteville, North Carolina",
+    "Hickory, North Carolina",
+    "Spartanburg, South Carolina",
+    "Greenville, South Carolina",
+    "Florence, South Carolina",
+    "Myrtle Beach, South Carolina",
+    "Valdosta, Georgia",
+    "Albany, Georgia",
+    "Columbus, Georgia",
+    "Macon, Georgia",
+    "Warner Robins, Georgia",
+    "Dothan, Alabama",
+    "Florence, Alabama",
+    "Decatur, Alabama",
+    "Tuscaloosa, Alabama",
+    "Meridian, Mississippi",
+    "Hattiesburg, Mississippi",
+    "Gulfport, Mississippi",
+    "Biloxi, Mississippi",
+    "Monroe, Louisiana",
+    "Lake Charles, Louisiana",
+    "Alexandria, Louisiana",
+    "Houma, Louisiana"
   ],
   "United Kingdom": [
     "Leicester",
@@ -1094,7 +1139,125 @@ const COUNTRIES_CITIES = {
     "Ludhiana, Punjab",
     "Agra, Uttar Pradesh",
     "Nashik, Maharashtra",
-    "Faridabad, Haryana"
+    "Faridabad, Haryana",
+    // Tier 2 cities with high potential, low competition
+    "Coimbatore, Tamil Nadu",
+    "Kochi, Kerala",
+    "Thiruvananthapuram, Kerala",
+    "Madurai, Tamil Nadu",
+    "Mysore, Karnataka",
+    "Mangalore, Karnataka",
+    "Dehradun, Uttarakhand",
+    "Shimla, Himachal Pradesh",
+    "Chandigarh",
+    "Guwahati, Assam",
+    "Bhubaneswar, Odisha",
+    "Raipur, Chhattisgarh",
+    "Ranchi, Jharkhand",
+    "Jodhpur, Rajasthan",
+    "Udaipur, Rajasthan",
+    "Ajmer, Rajasthan",
+    "Amritsar, Punjab",
+    "Jalandhar, Punjab",
+    "Jammu, Jammu and Kashmir",
+    "Srinagar, Jammu and Kashmir"
+  ],
+  "Poland": [
+    "Krakow", "Wroclaw", "Poznan", "Gdansk", "Szczecin", "Bydgoszcz", "Lublin", "Katowice", "Bialystok", "Gdynia",
+    "Czestochowa", "Radom", "Sosnowiec", "Torun", "Kielce", "Gliwice", "Zabrze", "Bytom", "Olsztyn", "Rzeszow",
+    "Ruda Slaska", "Rybnik", "Tychy", "Dabrowa Gornicza", "Plock", "Elblag", "Walbrzych", "Wloclawek", "Tarnow",
+    "Chorzow", "Kalisz", "Koszalin", "Legnica", "Grudziadz", "Slupsk", "Jaworzno", "Jastrzebie-Zdroj", "Nowy Sacz",
+    "Jelenia Gora", "Konin", "Zakopane", "Sopot", "Kolobrzeg", "Ustka", "Malbork", "Oswiecim", "Bielsko-Biala"
+  ],
+  "Czech Republic": [
+    "Prague", "Brno", "Ostrava", "Plzen", "Liberec", "Olomouc", "Usti nad Labem", "Hradec Kralove", "Ceske Budejovice",
+    "Pardubice", "Zlin", "Kladno", "Most", "Opava", "Frydek-Mistek", "Karlovy Vary", "Jihlava", "Teplice", "Decin",
+    "Jablonec nad Nisou", "Mlada Boleslav", "Prostejov", "Prerov", "Chomutov", "Trinec", "Tabor", "Znojmo", "Pribram",
+    "Cheb", "Trutnov", "Orlova", "Vsetin", "Kolin", "Pisek", "Havlickuv Brod", "Kromeriz", "Valasske Mezirici"
+  ],
+  "Romania": [
+    "Bucharest", "Cluj-Napoca", "Timisoara", "Iasi", "Constanta", "Craiova", "Brasov", "Galati", "Ploiesti", "Oradea",
+    "Braila", "Arad", "Pitesti", "Sibiu", "Bacau", "Targu Mures", "Baia Mare", "Buzau", "Botosani", "Satu Mare",
+    "Ramnicu Valcea", "Drobeta-Turnu Severin", "Piatra Neamt", "Targu Jiu", "Tulcea", "Focsani", "Resita", "Alba Iulia"
+  ],
+  "Hungary": [
+    "Budapest", "Debrecen", "Szeged", "Miskolc", "Pecs", "Gyor", "Nyiregyhaza", "Kecskemet", "Szekesfehervar", "Szombathely",
+    "Szolnok", "Tatabanya", "Kaposvar", "Bekes", "Zalaegerszeg", "Eger", "Nagykanizsa", "Dunakeszi", "Hodmezovasarhely",
+    "Sopron", "Erd", "Veszprem", "Baja", "Cegled", "Ozd", "Godollo", "Kazincbarcika", "Salgotar jan", "Mosonmagyarovar"
+  ],
+  "Slovakia": [
+    "Bratislava", "Kosice", "Presov", "Zilina", "Banska Bystrica", "Nitra", "Trnava", "Martin", "Trencin", "Poprad",
+    "Prievidza", "Zvolen", "Povazska Bystrica", "Nove Zamky", "Spisska Nova Ves", "Komarno", "Levice", "Michalovce"
+  ],
+  "Estonia": [
+    "Tallinn", "Tartu", "Narva", "Parnu", "Kohtla-Jarve", "Viljandi", "Rakvere", "Maardu", "Sillamae", "Kuressaare",
+    "Voru", "Jogeva", "Haapsalu", "Keila", "Paide", "Kivioli", "Tapa", "Polva", "Valga", "Elva"
+  ],
+  "Latvia": [
+    "Riga", "Daugavpils", "Liepaja", "Jelgava", "Jurmala", "Ventspils", "Rezekne", "Valmiera", "Jekabpils", "Ogre",
+    "Tukums", "Salaspils", "Cesis", "Kuldiga", "Saldus", "Talsi", "Dobele", "Krustpils", "Bauska", "Sigulda"
+  ],
+  "Lithuania": [
+    "Vilnius", "Kaunas", "Klaipeda", "Siauliai", "Panevezys", "Alytus", "Marijampole", "Mazeikiai", "Jonava", "Utena",
+    "Kedainiai", "Telsiai", "Visaginas", "Taurage", "Ukmerge", "Plunge", "Kretinga", "Silute", "Radviliskis", "Gargzdai"
+  ],
+  "Slovenia": [
+    "Ljubljana", "Maribor", "Celje", "Kranj", "Velenje", "Koper", "Novo Mesto", "Ptuj", "Trbovlje", "Kamnik",
+    "Jesenice", "Nova Gorica", "Domzale", "Skofja Loka", "Murska Sobota", "Slovenj Gradec", "Krsko", "Postojna"
+  ],
+  "Croatia": [
+    "Zagreb", "Split", "Rijeka", "Osijek", "Zadar", "Slavonski Brod", "Pula", "Sesvete", "Karlovac", "Varazdin",
+    "Sibenik", "Sisak", "Vinkovci", "Vukovar", "Dubrovnik", "Bjelovar", "Koprivnica", "Pozega", "Zapresic", "Solin"
+  ],
+  "Serbia": [
+    "Belgrade", "Novi Sad", "Nis", "Kragujevac", "Subotica", "Zrenjanin", "Pancevo", "Cacak", "Novi Pazar", "Kraljevo",
+    "Smederevo", "Leskovac", "Uzice", "Vrsac", "Zajecar", "Sombor", "Kikinda", "Sremska Mitrovica", "Jagodina", "Valjevo"
+  ],
+  "Bulgaria": [
+    "Sofia", "Plovdiv", "Varna", "Burgas", "Ruse", "Stara Zagora", "Pleven", "Sliven", "Dobrich", "Shumen",
+    "Pernik", "Haskovo", "Yambol", "Pazardzhik", "Blagoevgrad", "Veliko Tarnovo", "Vratsa", "Gabrovo", "Asenovgrad", "Vidin"
+  ],
+  "North Macedonia": [
+    "Skopje", "Bitola", "Kumanovo", "Prilep", "Tetovo", "Veles", "Stip", "Ohrid", "Gostivar", "Strumica",
+    "Kavadarci", "Kocani", "Kicevo", "Struga", "Radovis", "Gevgelija", "Debar", "Kriva Palanka", "Sveti Nikole", "Negotino"
+  ],
+  "Montenegro": [
+    "Podgorica", "Niksic", "Pljevlja", "Bijelo Polje", "Cetinje", "Bar", "Herceg Novi", "Berane", "Budva", "Ulcinj",
+    "Tivat", "Rozaje", "Kotor", "Danilovgrad", "Mojkovac", "Plav", "Kolasin", "Zabljak", "Pluzine", "Savnik"
+  ],
+  "Bosnia and Herzegovina": [
+    "Sarajevo", "Banja Luka", "Tuzla", "Zenica", "Mostar", "Bijeljina", "Brcko", "Prijedor", "Trebinje", "Cazin",
+    "Doboj", "Bugojno", "Gorazde", "Gradacac", "Konjic", "Lukavac", "Orasje", "Travnik", "Visoko", "Zivinice"
+  ],
+  "Albania": [
+    "Tirana", "Durres", "Vlore", "Elbasan", "Shkoder", "Fier", "Korce", "Berat", "Lushnje", "Kavaje",
+    "Pogradec", "Gjirokaster", "Sarande", "Lac", "Kukes", "Lezhe", "Patos", "Corovode", "Peshkopi", "Kucove"
+  ],
+  "Philippines": [
+    "Manila", "Quezon City", "Caloocan", "Las Pinas", "Makati", "Pasig", "Taguig", "Marikina", "Muntinlupa", "Paranaque",
+    "Valenzuela", "Malabon", "Navotas", "San Juan", "Mandaluyong", "Pasay", "Cebu City", "Davao City", "Zamboanga City",
+    "Antipolo", "Cagayan de Oro", "Iloilo City", "Bacolod", "General Santos", "Butuan", "Angeles", "Olongapo", "Tarlac",
+    "Cabanatuan", "San Fernando", "Laoag", "Dagupan", "Urdaneta", "Baguio", "San Carlos", "Ilagan", "Cauayan", "Santiago"
+  ],
+  "Vietnam": [
+    "Ho Chi Minh City", "Hanoi", "Hai Phong", "Da Nang", "Can Tho", "Bien Hoa", "Hue", "Nha Trang", "Buon Ma Thuot",
+    "Quy Nhon", "Vung Tau", "Nam Dinh", "Phan Thiet", "Long Xuyen", "Ha Long", "Thai Nguyen", "Thanh Hoa", "Rach Gia",
+    "Cam Ranh", "Vinh", "My Tho", "Da Lat", "Bac Lieu", "Bien Hoa", "Cao Lanh", "Pleiku", "Dong Hoi", "Tam Ky"
+  ],
+  "Thailand": [
+    "Bangkok", "Nonthaburi", "Pak Kret", "Hat Yai", "Chiang Mai", "Laem Chabang", "Udon Thani", "Pak Kret", "Nakhon Ratchasima",
+    "Chon Buri", "Lampang", "Ubon Ratchathani", "Khon Kaen", "Surat Thani", "Nakhon Si Thammarat", "Rayong", "Chiang Rai",
+    "Phuket", "Krabi", "Hua Hin", "Pattaya", "Kanchanaburi", "Ayutthaya", "Sukhothai", "Phitsanulok", "Trang", "Songkhla"
+  ],
+  "Malaysia": [
+    "Kuala Lumpur", "George Town", "Ipoh", "Shah Alam", "Petaling Jaya", "Klang", "Johor Bahru", "Subang Jaya", "Kuching",
+    "Kota Kinabalu", "Sandakan", "Seremban", "Kajang", "Kuantan", "Taiping", "Alor Setar", "Malacca City", "Ampang Jaya",
+    "Miri", "Kuala Terengganu", "Sungai Petani", "Tawau", "Kota Bharu", "Sibu", "Kulim", "Bintulu", "Kangar", "Kuala Kangsar"
+  ],
+  "Indonesia": [
+    "Jakarta", "Surabaya", "Bandung", "Bekasi", "Medan", "Depok", "Tangerang", "Palembang", "Semarang", "Makassar",
+    "South Tangerang", "Batam", "Bogor", "Pekanbaru", "Bandar Lampung", "Padang", "Malang", "Denpasar", "Samarinda", "Tasikmalaya",
+    "Balikpapan", "Pontianak", "Cimahi", "Sukabumi", "Mataram", "Jambi", "Cirebon", "Yogyakarta", "Palu", "Kupang"
   ]
 } as const
 

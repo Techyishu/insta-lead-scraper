@@ -8,7 +8,88 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Search, Download } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import { Loader2, Search, Download, Lightbulb, Copy, CheckCircle } from "lucide-react"
+
+// Types
+interface DMIdea {
+  id: number
+  title: string
+  message: string
+}
+
+// Industries for AI DM Ideas
+const INDUSTRIES = [
+  "Technology",
+  "Healthcare",
+  "Finance",
+  "Real Estate",
+  "E-commerce",
+  "Food & Beverage",
+  "Fashion & Beauty",
+  "Fitness & Wellness",
+  "Education",
+  "Legal Services",
+  "Marketing & Advertising",
+  "Consulting",
+  "Manufacturing",
+  "Retail",
+  "Hospitality",
+  "Construction",
+  "Automotive",
+  "Entertainment",
+  "Non-profit",
+  "Professional Services"
+]
+
+// Industry-specific Business Types for AI DM Ideas
+const INDUSTRY_BUSINESS_TYPES = {
+  "Technology": ["Software Company", "SaaS Startup", "IT Services", "Web Development Agency", "Mobile App Developer", "Tech Consultant", "AI/ML Company", "Cybersecurity Firm"],
+  "Healthcare": ["Medical Practice", "Dental Clinic", "Pharmacy", "Medical Device Company", "Telehealth Service", "Mental Health Practice", "Physical Therapy Clinic", "Healthcare Consultant"],
+  "Finance": ["Bank", "Credit Union", "Investment Firm", "Insurance Company", "Financial Advisor", "Accounting Firm", "Tax Service", "Fintech Startup"],
+  "Real Estate": ["Real Estate Agency", "Property Management", "Real Estate Developer", "Mortgage Broker", "Property Inspector", "Real Estate Investor", "Commercial Real Estate", "Real Estate Attorney"],
+  "E-commerce": ["Online Store", "Marketplace Seller", "Dropshipping Business", "Digital Products", "Subscription Box", "E-commerce Agency", "Online Marketplace", "Digital Marketing Agency"],
+  "Food & Beverage": ["Restaurant", "Cafe", "Bar", "Food Truck", "Catering Service", "Bakery", "Brewery", "Food Delivery Service"],
+  "Fashion & Beauty": ["Clothing Brand", "Beauty Salon", "Spa", "Cosmetics Company", "Fashion Designer", "Jewelry Store", "Hair Salon", "Nail Salon"],
+  "Fitness & Wellness": ["Gym", "Personal Trainer", "Yoga Studio", "Nutrition Coach", "Wellness Center", "Sports Club", "Fitness Equipment", "Health Coach"],
+  "Education": ["School", "Online Course Provider", "Tutoring Service", "Educational Technology", "Training Institute", "Language School", "Coaching Center", "Educational Consultant"],
+  "Legal Services": ["Law Firm", "Solo Practitioner", "Legal Consultant", "Paralegal Service", "Legal Technology", "Court Reporter", "Legal Document Service", "Mediation Service"],
+  "Marketing & Advertising": ["Digital Marketing Agency", "Social Media Agency", "PR Firm", "Content Creator", "Graphic Design Studio", "Video Production", "SEO Agency", "Influencer Marketing"],
+  "Consulting": ["Business Consultant", "Management Consultant", "Strategy Consultant", "HR Consultant", "IT Consultant", "Marketing Consultant", "Financial Consultant", "Operations Consultant"],
+  "Manufacturing": ["Manufacturing Company", "Product Designer", "Supply Chain", "Quality Control", "Industrial Equipment", "Packaging Company", "Assembly Service", "Contract Manufacturer"],
+  "Retail": ["Retail Store", "Boutique", "Department Store", "Specialty Shop", "Pop-up Store", "Franchise", "Wholesale Distributor", "Retail Chain"],
+  "Hospitality": ["Hotel", "Resort", "Bed & Breakfast", "Event Venue", "Travel Agency", "Tour Operator", "Vacation Rental", "Hospitality Management"],
+  "Construction": ["General Contractor", "Specialty Contractor", "Architecture Firm", "Interior Design", "Construction Company", "Home Builder", "Renovation Service", "Engineering Firm"],
+  "Automotive": ["Car Dealership", "Auto Repair Shop", "Car Rental", "Auto Parts Store", "Automotive Service", "Car Wash", "Tire Shop", "Auto Insurance"],
+  "Entertainment": ["Event Planning", "Music Venue", "Entertainment Agency", "Production Company", "Talent Agency", "Gaming Company", "Streaming Service", "Content Creator"],
+  "Non-profit": ["Charity Organization", "Foundation", "Social Service", "Religious Organization", "Educational Non-profit", "Healthcare Non-profit", "Environmental Group", "Community Organization"],
+  "Professional Services": ["Consulting Firm", "Professional Service", "Business Service", "Administrative Service", "Professional Association", "Service Provider", "B2B Service", "Corporate Service"]
+}
+
+// DM Tones
+const DM_TONES = [
+  "Professional",
+  "Casual & Friendly", 
+  "Direct & Straightforward",
+  "Conversational",
+  "Warm & Personal",
+  "Confident & Bold",
+  "Helpful & Supportive",
+  "Curious & Inquisitive"
+]
+
+// DM Types
+const DM_TYPES = [
+  "Straight to the Point",
+  "Question-Based Approach",
+  "Value Proposition First",
+  "Problem-Solution Format",
+  "Compliment + Offer",
+  "Story/Case Study Approach",
+  "Collaboration Proposal",
+  "Educational/Tips Based"
+]
 
 // Countries & Cities with High Potential for $500 Website Clients
 const COUNTRIES_CITIES = {
@@ -2397,6 +2478,16 @@ export default function LeadScraper() {
   })
   const [duplicatesFiltered, setDuplicatesFiltered] = useState(0)
 
+  // AI DM Ideas state
+  const [selectedIndustry, setSelectedIndustry] = useState("")
+  const [selectedDMBusinessType, setSelectedDMBusinessType] = useState("")
+  const [selectedTone, setSelectedTone] = useState("")
+  const [selectedDMType, setSelectedDMType] = useState("")
+  const [dmIdeas, setDmIdeas] = useState<DMIdea[]>([])
+  const [loadingDMIdeas, setLoadingDMIdeas] = useState(false)
+  const [dmError, setDmError] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
+
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Get keywords for selected business type
@@ -2511,6 +2602,17 @@ export default function LeadScraper() {
     setSeenUsernames(new Set())
     setDuplicatesFiltered(0)
 
+    // Get the search keywords from business selection or manual input
+    const keywords = getSelectedKeywords()
+    const searchWho = keywords.length > 0 ? keywords.slice(0, 3).join(' OR ') : who.trim()
+
+    // Validate that we have both search terms and location
+    if (!searchWho || !selectedCity.trim()) {
+      setError("Please select a business type and city, or enter manual keywords.")
+      setLoading(false)
+      return
+    }
+
     try {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minute timeout
@@ -2519,7 +2621,7 @@ export default function LeadScraper() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          who,
+          who: searchWho,
           location: selectedCity,
           limit,
           page: 1,
@@ -2585,6 +2687,10 @@ export default function LeadScraper() {
     setLoadingMore(true)
     setError(null)
 
+    // Get the search keywords from business selection or manual input
+    const keywords = getSelectedKeywords()
+    const searchWho = keywords.length > 0 ? keywords.slice(0, 3).join(' OR ') : who.trim()
+
     try {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 120000)
@@ -2593,7 +2699,7 @@ export default function LeadScraper() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          who,
+          who: searchWho,
           location: selectedCity,
           limit,
           page: currentPage + 1,
@@ -2668,6 +2774,60 @@ export default function LeadScraper() {
       }
     } finally {
       setLoadingMore(false)
+    }
+  }
+
+  // Get available business types for selected industry
+  const getAvailableBusinessTypes = (): string[] => {
+    if (!selectedIndustry) return []
+    return INDUSTRY_BUSINESS_TYPES[selectedIndustry as keyof typeof INDUSTRY_BUSINESS_TYPES] || []
+  }
+
+  // Generate DM Ideas function
+  async function generateDMIdeas() {
+    if (!selectedIndustry || !selectedDMBusinessType || !selectedTone || !selectedDMType) {
+      setDmError("Please fill in all required fields.")
+      return
+    }
+
+    setLoadingDMIdeas(true)
+    setDmError(null)
+    setDmIdeas([])
+
+    try {
+      const res = await fetch("/api/dm-ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          industry: selectedIndustry,
+          businessType: selectedDMBusinessType,
+          tone: selectedTone,
+          dmType: selectedDMType,
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || "Failed to generate DM ideas")
+      }
+
+      const data = await res.json()
+      setDmIdeas(data.ideas || [])
+    } catch (err: any) {
+      setDmError(err?.message || "Something went wrong while generating DM ideas.")
+    } finally {
+      setLoadingDMIdeas(false)
+    }
+  }
+
+  // Copy DM idea to clipboard
+  async function copyToClipboard(text: string, id: number) {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy text: ', err)
     }
   }
 
@@ -2833,6 +2993,17 @@ export default function LeadScraper() {
 
   return (
     <div className="grid gap-4 sm:gap-6">
+      <Tabs defaultValue="lead-scraper" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="lead-scraper">Lead Scraper</TabsTrigger>
+          <TabsTrigger value="ai-dm-ideas">
+            <Lightbulb className="mr-2 h-4 w-4" />
+            AI DM Ideas
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="lead-scraper" className="space-y-4">
+          <div className="grid gap-4 sm:gap-6">
       <form onSubmit={handleSubmit} className="grid gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
           <div className="grid gap-2">
@@ -3182,6 +3353,193 @@ export default function LeadScraper() {
 
         </CardContent>
       </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="ai-dm-ideas" className="space-y-4">
+          <div className="grid gap-4 sm:gap-6">
+            <Card>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Lightbulb className="h-5 w-5 text-blue-600" />
+                    <h2 className="text-lg font-semibold">AI-Powered Instagram DM Ideas</h2>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Generate personalized Instagram DM templates for reaching out to businesses without websites. 
+                    These AI-generated messages focus on web development services and are designed to be natural, 
+                    conversational, and compliant with Instagram's guidelines.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="industry">Industry *</Label>
+                      <Select value={selectedIndustry} onValueChange={(value) => {
+                        setSelectedIndustry(value)
+                        setSelectedDMBusinessType("") // Reset business type when industry changes
+                      }}>
+                        <SelectTrigger id="industry" className="text-base">
+                          <SelectValue placeholder="Select industry" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {INDUSTRIES.map((industry) => (
+                            <SelectItem key={industry} value={industry}>
+                              {industry}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="dm-business-type">Business Type *</Label>
+                      <Select 
+                        value={selectedDMBusinessType} 
+                        onValueChange={setSelectedDMBusinessType}
+                        disabled={!selectedIndustry}
+                      >
+                        <SelectTrigger id="dm-business-type" className="text-base">
+                          <SelectValue placeholder={selectedIndustry ? "Select business type" : "Select industry first"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getAvailableBusinessTypes().map((type: string) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="tone">Tone *</Label>
+                      <Select value={selectedTone} onValueChange={setSelectedTone}>
+                        <SelectTrigger id="tone" className="text-base">
+                          <SelectValue placeholder="Select tone" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DM_TONES.map((tone) => (
+                            <SelectItem key={tone} value={tone}>
+                              {tone}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="dm-type">DM Approach *</Label>
+                      <Select value={selectedDMType} onValueChange={setSelectedDMType}>
+                        <SelectTrigger id="dm-type" className="text-base">
+                          <SelectValue placeholder="Select approach" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DM_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={generateDMIdeas} 
+                    disabled={loadingDMIdeas || !selectedIndustry || !selectedDMBusinessType}
+                    className="w-full sm:w-auto"
+                  >
+                    {loadingDMIdeas ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating Ideas...
+                      </>
+                    ) : (
+                      <>
+                        <Lightbulb className="mr-2 h-4 w-4" />
+                        Generate DM Ideas
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {dmError && (
+              <Alert variant="destructive">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{dmError}</AlertDescription>
+              </Alert>
+            )}
+            
+            {dmIdeas.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Generated DM Ideas</h3>
+                      <span className="text-sm text-muted-foreground">
+                        {selectedIndustry} • {selectedDMBusinessType}
+                      </span>
+                    </div>
+                    
+                    <div className="grid gap-4">
+                      {dmIdeas.map((idea) => (
+                        <Card key={idea.id} className="border-l-4 border-l-blue-500">
+                          <CardContent className="p-4">
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-sm">{idea.title}</h4>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => copyToClipboard(idea.message, idea.id)}
+                                  className="h-8"
+                                >
+                                  {copiedId === idea.id ? (
+                                    <>
+                                      <CheckCircle className="mr-1 h-3 w-3 text-green-600" />
+                                      Copied
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="mr-1 h-3 w-3" />
+                                      Copy
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                              <Textarea
+                                value={idea.message}
+                                readOnly
+                                className="min-h-[80px] text-sm resize-none"
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    
+                    <Alert>
+                      <Lightbulb className="h-4 w-4" />
+                      <AlertTitle>Best Practices</AlertTitle>
+                      <AlertDescription className="text-sm">
+                        • Respect Instagram's daily DM limits (20-50 for new accounts, 100-150 for established accounts)
+                        • Personalize each message before sending
+                        • Only message users who might genuinely benefit from your services
+                        • Follow up respectfully if you don't get a response
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

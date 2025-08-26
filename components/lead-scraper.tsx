@@ -10,7 +10,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Search, Download, Lightbulb, Copy, CheckCircle } from "lucide-react"
+import { Loader2, Search, Download, Lightbulb, Copy, CheckCircle, MapPin } from "lucide-react"
+import GoogleMapsScraper from "./google-maps-scraper"
 
 // Types
 interface DMIdea {
@@ -3099,11 +3100,15 @@ export default function LeadScraper() {
   return (
     <div className="grid gap-4 sm:gap-6">
       <Tabs defaultValue="lead-scraper" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="lead-scraper">Lead Scraper</TabsTrigger>
           <TabsTrigger value="ai-dm-ideas">
             <Lightbulb className="mr-2 h-4 w-4" />
             AI DM Ideas
+          </TabsTrigger>
+          <TabsTrigger value="google-maps">
+            <MapPin className="mr-2 h-4 w-4" />
+            Google Maps
           </TabsTrigger>
         </TabsList>
         
@@ -3643,6 +3648,10 @@ export default function LeadScraper() {
               </Card>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="google-maps" className="space-y-4">
+          <GoogleMapsScraper />
         </TabsContent>
       </Tabs>
     </div>

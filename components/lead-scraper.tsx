@@ -2559,7 +2559,8 @@ export default function LeadScraper() {
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState("")
   const [selectedBusinessType, setSelectedBusinessType] = useState("")
 
-  const [limit, setLimit] = useState(100)
+  const [limit, setLimit] = useState(300)
+  const [pagesToScrape, setPagesToScrape] = useState(3)
   const [results, setResults] = useState<ResultItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -2652,9 +2653,24 @@ export default function LeadScraper() {
   // Helper to check if a URL is a profile (not post, reel, tv, stories, etc)
   const isInstagramProfileUrl = (url: string) => {
     const cleanUrl = url.split('?')[0].split('#')[0]
-    // Matches only profile URLs: https://instagram.com/username or https://instagram.com/username/
-    // Excludes: /p/, /reel/, /tv/, /stories/, /channel/, /tagged/, etc
-    return /instagram\.com\/[A-Za-z0-9_.]+\/?$/.test(cleanUrl)
+    // Check if it's an Instagram URL first
+    if (!cleanUrl.includes('instagram.com')) return false
+    
+    // Exclude non-profile URLs
+    if (cleanUrl.includes('/p/') || 
+        cleanUrl.includes('/reel/') || 
+        cleanUrl.includes('/tv/') || 
+        cleanUrl.includes('/stories/') || 
+        cleanUrl.includes('/channel/') || 
+        cleanUrl.includes('/tagged/') ||
+        cleanUrl.includes('/explore/') ||
+        cleanUrl.includes('/accounts/')) {
+      return false
+    }
+    
+    // Match profile URLs: instagram.com/username or www.instagram.com/username
+    // Allow for trailing slash and various subdomains
+    return /(?:www\.)?instagram\.com\/[A-Za-z0-9_.]+\/?$/.test(cleanUrl)
   }
 
   // Improved duplicate filtering: only one result per Instagram username (profile URLs only)
@@ -2662,11 +2678,15 @@ export default function LeadScraper() {
     const filteredResults: ResultItem[] = []
     const seenUsernames = new Set(existingUsernames)
     let duplicateCount = 0
+    let nonProfileCount = 0
+    const rejectedUrls: string[] = []
 
     for (const result of newResults) {
       // Filter out post, reel, tv, stories, channel, tagged, etc
       if (!isInstagramProfileUrl(result.url)) {
         duplicateCount++
+        nonProfileCount++
+        rejectedUrls.push(result.url)
         continue
       }
       const username = result.username?.toLowerCase() || extractInstagramUsername(result.url)
@@ -2682,6 +2702,15 @@ export default function LeadScraper() {
         duplicateCount++
       }
     }
+    
+    console.log('Frontend filtering debug:', {
+      totalReceived: newResults.length,
+      nonProfileUrls: nonProfileCount,
+      duplicateUsernames: duplicateCount - nonProfileCount,
+      finalResults: filteredResults.length,
+      sampleRejectedUrls: rejectedUrls.slice(0, 5)
+    })
+    
     return { filteredResults, duplicateCount, updatedUsernames: seenUsernames }
   }
 
@@ -2731,6 +2760,7 @@ export default function LeadScraper() {
           location: selectedCity,
           limit,
           page: 1,
+          pagesToScrape,
         }),
         signal: controller.signal,
       })
@@ -2809,6 +2839,7 @@ export default function LeadScraper() {
           location: selectedCity,
           limit,
           page: currentPage + 1,
+          pagesToScrape,
         }),
         signal: controller.signal,
       })
@@ -3115,7 +3146,7 @@ export default function LeadScraper() {
         <TabsContent value="lead-scraper" className="space-y-4">
           <div className="grid gap-4 sm:gap-6">
       <form onSubmit={handleSubmit} className="grid gap-4">
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="business-category">Business Category</Label>
             <Select value={selectedBusinessCategory} onValueChange={(value) => {
@@ -3188,25 +3219,44 @@ export default function LeadScraper() {
             </Select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="limit">Max Results</Label>
+            <Label htmlFor="pages">Pages to Scrape</Label>
             <Input
-              id="limit"
+              id="pages"
               type="number"
               min="1"
-              max="200"
-              placeholder="100"
-              value={limit}
+              max="3"
+              placeholder="3"
+              value={pagesToScrape}
               onChange={(e) => {
                 const value = parseInt(e.target.value) || 1
-                setLimit(Math.min(Math.max(value, 1), 200))
+                setPagesToScrape(Math.min(Math.max(value, 1), 3))
               }}
               className="text-base"
             />
             <p className="text-xs text-muted-foreground">
-              Maximum 200 results
-              {limit > 100 && (
+              1-3 pages (100 results each)
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="limit">Max Results</Label>
+            <Input
+              id="limit"
+              type="number"
+              min="100"
+              max="300"
+              placeholder="300"
+              value={limit}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 100
+                setLimit(Math.min(Math.max(value, 100), 300))
+              }}
+              className="text-base"
+            />
+            <p className="text-xs text-muted-foreground">
+              100-300 results (default: 300)
+              {limit > 200 && (
                 <span className="block text-orange-600 mt-1">
-                  ⚠️ Large limits (100+) may take longer and could timeout
+                  ⚠️ Large limits may take longer to process
                 </span>
               )}
             </p>
@@ -3344,6 +3394,9 @@ export default function LeadScraper() {
                 Total: {results.length}
               </span>
               <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                Pages: {pagesToScrape} × 100 = {pagesToScrape * 100} max
+              </span>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
                 Limit: {limit}
               </span>
               {duplicatesFiltered > 0 && (
@@ -3351,16 +3404,9 @@ export default function LeadScraper() {
                   🔄 {duplicatesFiltered} duplicates filtered
                 </span>
               )}
-              {currentPage > 1 && (
-                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                  Page: {currentPage}
-                </span>
-              )}
-              {hasMorePages && (
-                <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
-                  📄 More pages available
-                </span>
-              )}
+              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                📄 Multi-page scraping enabled
+              </span>
 
             </div>
           </div>

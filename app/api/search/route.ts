@@ -124,24 +124,26 @@ async function scrapeInstagramProfiles(usernames: string[], postUrls: string[], 
 
 export async function POST(req: Request) {
   try {
-    const { who, location, limit = 50, enrichProfiles = false, page = 1 } = (await req.json()) as {
+    const { who, location, limit = 50, enrichProfiles = false, page = 1, pagesToScrape = 1 } = (await req.json()) as {
       who?: string
       location?: string
       limit?: number
       enrichProfiles?: boolean
       page?: number
+      pagesToScrape?: number
     }
 
     if (!who || !location) {
       return new Response("Missing required fields: who, location", { status: 400 })
     }
 
-    // Validate and clamp limit between 1 and 200
-    const validatedLimit = Math.min(Math.max(parseInt(String(limit)) || 50, 1), 200)
+    // Validate and clamp limit between 100 and 300
+    const validatedLimit = Math.min(Math.max(parseInt(String(limit)) || 300, 100), 300)
     const validatedPage = Math.max(parseInt(String(page)) || 1, 1)
+    const validatedPagesToScrape = Math.min(Math.max(parseInt(String(pagesToScrape)) || 1, 1), 3)
 
-    // Set the Apify API key here if not set in environment
-    const apiToken = extractToken(process.env.APIFY_API_TOKEN || "")
+    // Set the Apify API key directly
+    const apiToken = "apify_api_FDWcfGexwocA4bRTT9vJvLx1bWSWYx1MMifI"
     if (!apiToken) {
       return new Response(
         "API token not configured. Please set APIFY_API_TOKEN environment variable.",
@@ -151,27 +153,22 @@ export async function POST(req: Request) {
 
     const searchQuery = `site:instagram.com ${String(who).trim()} ${String(location).trim()}`
 
-    // Use the dataset-items endpoint
-    const endpoint =
-      "https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token=" +
-      encodeURIComponent(apiToken)
+    // Use the dataset-items endpoint with API key
+    const endpoint = "https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token=apify_api_Mux6Q5ayjJXkKS4JxJtC7cDinYhb1s3OQWPM"
 
     // Calculate pagination parameters for Google Search
     const maxResultsPerPage = 100
-    const effectiveResultsPerPage = Math.min(validatedLimit, maxResultsPerPage)
     
-    // For proper pagination, we need to fetch enough pages to cover the requested page
-    // Google returns 10-100 results per page, so we calculate how many pages we need
-    const totalResultsNeeded = validatedPage * effectiveResultsPerPage
-    const googlePagesNeeded = Math.ceil(totalResultsNeeded / 100)
-    const maxPages = Math.min(10, googlePagesNeeded)
+    // For multi-page scraping, we fetch multiple pages to get more results
+    const maxPages = Math.min(10, validatedPagesToScrape)
+    const resultsPerGooglePage = 100 // Always get max results per Google page
 
-    console.log('Pagination calculation:', {
+    console.log('Multi-page scraping calculation:', {
       validatedPage,
-      effectiveResultsPerPage,
-      totalResultsNeeded,
-      googlePagesNeeded,
-      maxPages
+      validatedLimit,
+      validatedPagesToScrape,
+      maxPages,
+      resultsPerGooglePage
     })
 
     const payload = {
@@ -179,14 +176,14 @@ export async function POST(req: Request) {
       forceExactMatch: false,
       includeIcons: false,
       includeUnfilteredResults: false,
-      maxPagesPerQuery: maxPages, // Get enough Google pages to support our pagination
+      maxPagesPerQuery: maxPages, // Scrape multiple pages for more results
       mobileResults: false,
       queries: searchQuery, // actor expects a string
-      resultsPerPage: 100, // Always get max results per Google page
+      resultsPerPage: resultsPerGooglePage, // Always get max results per Google page
       saveHtml: false,
       saveHtmlToKeyValueStore: true,
       // Add custom data to prevent caching and ensure fresh results
-      customData: `page-${validatedPage}-${Date.now()}`,
+      customData: `pages-${validatedPagesToScrape}-limit-${validatedLimit}-${Date.now()}`,
     }
 
     const res = await fetch(endpoint, {
@@ -194,8 +191,6 @@ export async function POST(req: Request) {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        "X-Apify-Token": apiToken,
-        Authorization: `Bearer ${apiToken}`,
       },
       body: JSON.stringify(payload),
     })
@@ -274,10 +269,18 @@ export async function POST(req: Request) {
       if (maybeArrayKey) items = (parsed as any)[maybeArrayKey]
     }
 
-    // Some variants return an array with one object that has organicResults
-    if (items.length === 1 && Array.isArray(items[0]?.organicResults)) {
-      items = items[0].organicResults
+    // Extract organicResults from each page response
+    let allOrganicResults: any[] = []
+    if (Array.isArray(items)) {
+      items.forEach(pageResult => {
+        if (Array.isArray(pageResult?.organicResults)) {
+          allOrganicResults = allOrganicResults.concat(pageResult.organicResults)
+        }
+      })
     }
+    
+    // Use the extracted organic results
+    items = allOrganicResults
 
     console.log('Data parsing debug:', {
       itemsLength: items.length,
@@ -288,19 +291,39 @@ export async function POST(req: Request) {
       sampleItem: items[0]
     })
 
-    // Process all results - for pagination, we return fresh results each time
-    const allResults = (items as any[])
+    // Process all results from multiple pages
+    const mappedResults = (items as any[])
       .map((it) => {
         const title = firstNonEmpty(it, ["title", "pageTitle", "heading", "name"])
         const url = firstNonEmpty(it, ["url", "link", "finalUrl", "pageUrl", "resultUrl", "destinationUrl"])
-        return { title, url }
+        return { title, url, originalItem: it }
       })
-      .filter((r) => r.title && r.url)
+    
+    console.log('URL filtering debug:', {
+      totalMappedResults: mappedResults.length,
+      sampleUrls: mappedResults.slice(0, 10).map(r => ({ title: r.title, url: r.url })),
+      instagramUrls: mappedResults.filter(r => r.url && r.url.includes('instagram.com')).length,
+      withTitleAndUrl: mappedResults.filter(r => r.title && r.url).length,
+      allFilters: mappedResults.filter(r => r.title && r.url && r.url.includes('instagram.com')).length
+    })
+    
+    const allResults = mappedResults
+      .filter((r) => r.title && r.url && r.url.includes('instagram.com'))
+      .map(r => ({ title: r.title, url: r.url }))
 
-    // For pagination: return the correct slice of results for the requested page
-    const startIdx = (validatedPage - 1) * effectiveResultsPerPage;
-    const endIdx = startIdx + effectiveResultsPerPage;
-    const results = allResults.slice(startIdx, endIdx);
+    // Remove duplicates based on URL
+    const uniqueResults = allResults.filter((result, index, self) => 
+      index === self.findIndex(r => r.url === result.url)
+    )
+    
+    console.log('Duplicate filtering debug:', {
+      beforeDedup: allResults.length,
+      afterDedup: uniqueResults.length,
+      duplicatesRemoved: allResults.length - uniqueResults.length
+    })
+    
+    // For multi-page scraping: return up to the requested limit from all scraped pages
+    const results = uniqueResults.slice(0, validatedLimit);
 
     console.log('Results processing:', {
       totalResults: allResults.length,
@@ -311,72 +334,15 @@ export async function POST(req: Request) {
       sampleUrls: results.slice(0, 3).map(r => r.url)
     })
 
-    // Determine if there might be more pages
-    // If we got results and haven't hit the page limit, there might be more
+    // Determine if there might be more pages available
+    // For multi-page scraping, we consider there are more pages if we got a good amount of results
     const hasMorePages = (
       results.length > 0 && // We got some results
-      validatedPage < 10 && // Limit to 10 pages max
-      allResults.length >= effectiveResultsPerPage * 0.8 // We got a decent amount of results (80% of requested)
+      validatedPagesToScrape < 10 && // Haven't hit max page limit
+      allResults.length >= (validatedPagesToScrape * resultsPerGooglePage * 0.7) // Got decent results (70% of expected)
     )
 
-    // Extract Instagram usernames and enrich with profile data
-    if (enrichProfiles && results.length > 0) {
-      const usernames: string[] = [];
-      const postUrls: string[] = [];
-      
-      results.forEach(result => {
-        if (result.url.includes('instagram.com')) {
-          const username = extractInstagramUsername(result.url);
-          if (username) {
-            usernames.push(username);
-          } else if (result.url.includes('/p/') || result.url.includes('/reel/')) {
-            postUrls.push(result.url);
-          }
-        }
-      });
-      
-      // Get profile data from Instagram
-      const profiles = await scrapeInstagramProfiles(usernames, postUrls, apiToken);
-      
-      // Merge profile data with existing results
-      const enrichedResults = results.map(result => {
-        const username = extractInstagramUsername(result.url);
-        const profile = profiles.find(p => p.username === username);
-        
-        if (profile) {
-          return {
-            ...result,
-            username: profile.username,
-            fullName: profile.fullName,
-            bio: profile.biography,
-            followers: profile.followersCount,
-            following: profile.followsCount,
-            posts: profile.postsCount,
-            verified: profile.verified,
-            businessAccount: profile.businessCategoryName ? true : false,
-            profilePicUrl: profile.profilePicUrl,
-            externalUrl: profile.externalUrl,
-            contactInfo: {
-              email: profile.businessEmail,
-              phone: profile.businessPhoneNumber,
-              address: profile.businessContactMethod
-            }
-          };
-        }
-        return result;
-      });
-      
-      return Response.json({ 
-        query: searchQuery, 
-        results: enrichedResults,
-        profilesFound: profiles.length,
-        enriched: true,
-        limit: validatedLimit,
-        page: validatedPage,
-        hasMorePages,
-        totalBeforeLimit: allResults.length
-      });
-    }
+    // Simple response without Instagram profile enrichment
 
     return Response.json({ 
       query: searchQuery, 

@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     const searchQuery = `site:instagram.com ${String(who).trim()} ${String(location).trim()}`
 
     // Use the dataset-items endpoint with API key
-    const endpoint = "https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token=apify_api_Mux6Q5ayjJXkKS4JxJtC7cDinYhb1s3OQWPM"
+    const endpoint = "https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token=apify_api_oWMdY5lFu8nO4TIzv6bCLcrPovK41F13K5eE"
 
     // Calculate pagination parameters for Google Search
     const maxResultsPerPage = 100

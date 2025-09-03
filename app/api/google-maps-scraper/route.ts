@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Make request to Apify API
-    const apifyUrl = 'https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items?token=apify_api_a33quPqAQ5BdaGAVNIWHrQrAJBBCem04wluA'
+    const apifyUrl = 'https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items?token=apify_api_sBRkBzqhEAnERXE7OJGl6gkHBR21l84qvvwu'
     const response = await fetch(apifyUrl, {
       method: 'POST',
       headers: {

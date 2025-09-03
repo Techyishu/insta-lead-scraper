@@ -2106,96 +2106,68 @@ const COUNTRIES_CITIES = {
   ],
 } as const
 
-// Business categories with comprehensive keyword lists
-const BUSINESS_CATEGORIES = {
-  "Healthcare & Medical": {
-    "Doctor/Physician": ["doctor", "physician", "medical", "healthcare", "clinic", "surgeon", "specialist", "cardiologist", "dermatologist", "neurologist", "pediatrician", "family medicine", "internal medicine", "general practitioner"],
-    "Dentist": ["dentist", "dental", "dentistry", "orthodontist", "oral surgeon", "periodontist", "endodontist", "dental hygienist", "cosmetic dentist", "pediatric dentist", "dental clinic", "oral health"],
-    "Veterinarian": ["vet", "veterinarian", "animal hospital", "pet care", "veterinary clinic", "animal doctor", "pet health", "emergency vet", "animal clinic", "pet hospital"],
-    "Chiropractor": ["chiropractor", "chiropractic", "spine care", "back pain", "neck pain", "sports chiropractor", "wellness center", "spinal adjustment"],
-    "Optometrist": ["optometrist", "eye doctor", "vision care", "eye exam", "glasses", "contact lenses", "optical", "eye care", "vision center"],
-    "Pharmacist": ["pharmacist", "pharmacy", "medication", "prescription", "drug store", "clinical pharmacist", "compounding pharmacy"],
-    "Therapist/Counselor": ["therapist", "therapy", "counseling", "mental health", "psychologist", "marriage counselor", "family therapist", "behavioral therapist", "counselor"]
-  },
-  "Legal & Professional Services": {
-    "Lawyer/Attorney": ["lawyer", "attorney", "legal", "law firm", "legal services", "litigation", "criminal lawyer", "family lawyer", "corporate lawyer", "personal injury lawyer", "immigration lawyer", "estate planning"],
-    "Accountant": ["accountant", "accounting", "bookkeeping", "tax preparation", "financial services", "CPA", "tax accountant", "business accounting", "tax services"],
-    "Financial Advisor": ["financial advisor", "finance", "investment", "retirement planning", "wealth management", "financial planning", "insurance agent", "financial consultant"],
-    "Insurance Agent": ["insurance agent", "insurance", "auto insurance", "home insurance", "life insurance", "health insurance", "insurance broker", "insurance services"],
-    "Consultant": ["consultant", "consulting", "business consultant", "marketing consultant", "financial consultant", "strategy consultant", "management consultant", "business advisor"]
-  },
-  "Home & Construction Services": {
-    "Contractor": ["contractor", "construction", "home improvement", "general contractor", "renovation", "remodeling", "building contractor", "builder", "home builder"],
-    "Plumber": ["plumber", "plumbing", "plumbing services", "drain cleaning", "pipe repair", "water heater", "emergency plumber", "residential plumber", "commercial plumber"],
-    "Electrician": ["electrician", "electrical", "electrical services", "electrical repair", "wiring", "electrical contractor", "residential electrician", "commercial electrician", "electrical installation"],
-    "HVAC Technician": ["hvac", "heating", "cooling", "air conditioning", "furnace repair", "HVAC contractor", "climate control", "ventilation", "ductwork"],
-    "Roofer": ["roofer", "roofing", "roof repair", "roof replacement", "commercial roofing", "residential roofing", "roof contractor", "gutter services"],
-    "Painter": ["painter", "painting", "house painting", "commercial painting", "interior painting", "exterior painting", "paint contractor"],
-    "Handyman": ["handyman", "home repair", "maintenance", "fix", "installation", "repair services", "home services", "odd jobs"],
-    "Landscaper": ["landscaping", "landscape design", "lawn care", "gardening", "tree service", "irrigation", "hardscaping", "outdoor design", "yard work"]
-  },
-  "Beauty & Wellness": {
-    "Hair Salon/Barber": ["salon", "hair salon", "hairstylist", "barber", "beauty salon", "hair cutting", "hair coloring", "beauty services", "barber shop"],
-    "Spa/Massage": ["spa", "massage", "massage therapy", "therapeutic massage", "deep tissue massage", "relaxation massage", "sports massage", "spa services"],
-    "Nail Salon": ["nail salon", "nails", "manicure", "pedicure", "nail art", "nail care", "gel nails", "acrylic nails"],
-    "Fitness/Gym": ["gym", "fitness", "personal trainer", "workout", "fitness center", "health club", "crossfit", "yoga studio", "pilates", "strength training"],
-    "Yoga Instructor": ["yoga", "yoga instructor", "meditation", "mindfulness", "wellness", "spiritual", "holistic health", "yoga studio"],
-    "Nutritionist": ["nutritionist", "nutrition", "dietitian", "meal planning", "weight loss", "health coaching", "wellness", "diet coach"]
-  },
-  "Food & Hospitality": {
-    "Restaurant": ["restaurant", "food", "dining", "cuisine", "chef", "fine dining", "fast food", "local restaurant", "family restaurant", "takeout"],
-    "Cafe/Coffee Shop": ["cafe", "coffee shop", "coffee house", "bistro", "espresso bar", "coffee roaster", "tea house", "local cafe", "specialty coffee", "breakfast cafe"],
-    "Bakery": ["bakery", "baking", "pastry", "bread", "cakes", "cookies", "custom cakes", "wedding cakes", "fresh bread", "pastries", "desserts"],
-    "Catering": ["catering", "caterer", "event catering", "wedding catering", "corporate catering", "party catering", "food service"],
-    "Hotel/Accommodation": ["hotel", "accommodation", "bed and breakfast", "inn", "motel", "guest house", "resort", "hospitality", "lodging", "vacation rental"]
-  },
-  "Automotive Services": {
-    "Auto Repair/Mechanic": ["mechanic", "auto repair", "car repair", "automotive", "auto service", "engine repair", "brake repair", "oil change", "transmission repair", "tire service"],
-    "Car Dealer": ["car dealer", "auto", "auto sales", "used cars", "automotive sales", "car lot", "vehicle sales", "car dealership"]
-  },
-  "Creative & Media Services": {
-    "Photographer": ["photographer", "photography", "wedding photographer", "portrait photographer", "event photographer", "commercial photographer", "photo studio", "headshots", "family photographer"],
-    "Graphic Designer": ["graphic designer", "graphic", "logo design", "branding", "marketing materials", "print design", "digital design", "creative services"],
-    "Web Developer": ["web developer", "web", "website design", "digital marketing", "SEO", "web design", "online marketing", "web services"],
-    "Artist": ["artist", "art", "art gallery", "custom art", "portraits", "paintings", "art studio", "creative services"],
-    "Musician/DJ": ["musician", "music", "band", "DJ", "music teacher", "wedding music", "live music", "entertainment", "performer"]
-  },
-  "Real Estate & Property": {
-    "Real Estate Agent": ["realtor", "real estate", "property", "homes", "real estate agent", "broker", "property sales", "residential realtor", "commercial realtor", "listing agent"],
-    "Property Management": ["property management", "property manager", "rental properties", "landlord services", "tenant management", "real estate management"]
-  },
-  "Education & Training": {
-    "Tutor": ["tutor", "tutoring", "education", "academic support", "test prep", "math tutor", "english tutor", "private tutor", "learning center"],
-    "Coach": ["coach", "coaching", "life coach", "business coach", "sports coach", "fitness coach", "career coach", "wellness coach"],
-    "Childcare": ["childcare", "daycare", "preschool", "childcare center", "babysitting", "nursery", "kids care", "early childhood", "child development"]
-  },
-  "Event & Wedding Services": {
-    "Wedding Planner": ["wedding planner", "wedding", "bridal", "wedding services", "wedding venue", "wedding coordinator", "event planning"],
-    "Event Planner": ["event planner", "event", "party planning", "corporate events", "special events", "event coordination", "celebration planning"],
-    "Florist": ["florist", "flowers", "floral design", "wedding flowers", "flower arrangements", "flower shop", "event flowers", "bouquets"]
-  },
-  "Technology Services": {
-    "Computer Repair": ["computer repair", "computer", "IT services", "tech support", "computer sales", "laptop repair", "data recovery", "network services"],
-    "Phone Repair": ["phone repair", "mobile", "cell phone store", "mobile device repair", "screen repair", "phone unlocking", "mobile accessories"],
-    "Tech Support": ["tech", "technology", "IT services", "tech support", "software", "hardware", "computer services"]
-  },
-  "Retail & Shopping": {
-    "Retail Store": ["retail", "boutique", "store", "shop", "retail store", "gift shop", "specialty store", "local business", "merchant", "retailer"],
-    "Fashion/Clothing": ["fashion", "fashion designer", "clothing", "boutique", "custom clothing", "alterations", "fashion stylist", "apparel"],
-    "Jewelry Store": ["jeweler", "jewelry", "custom jewelry", "jewelry repair", "engagement rings", "wedding rings", "fine jewelry", "watch repair"]
-  },
-  "Transportation & Logistics": {
-    "Moving Company": ["moving", "moving company", "movers", "relocation", "packing services", "local moving", "long distance moving"],
-    "Delivery Service": ["logistics", "shipping", "freight", "delivery service", "courier", "transportation", "logistics company", "warehouse"],
-    "Travel Agent": ["travel", "travel agent", "vacation planning", "tour guide", "travel services", "cruise specialist", "destination wedding"]
-  },
-  "Specialized Services": {
-    "Cleaning Service": ["cleaning", "cleaning service", "house cleaning", "commercial cleaning", "carpet cleaning", "window cleaning", "deep cleaning", "maid service"],
-    "Security Services": ["security", "security services", "security guard", "alarm systems", "surveillance", "home security", "security company"],
-    "Pest Control": ["pest", "pest control", "exterminator", "bug control", "rodent control", "termite control", "wildlife removal"],
-    "Locksmith": ["locksmith", "lock repair", "key service", "lock installation", "emergency locksmith", "automotive locksmith"],
-    "Pool Service": ["pool", "pool service", "pool cleaning", "pool maintenance", "pool repair", "swimming pool", "pool contractor"]
-  }
+// Business types with comprehensive keyword lists
+const BUSINESS_TYPES = {
+  "Doctor/Physician": ["doctor", "physician", "medical", "healthcare", "clinic", "surgeon", "specialist", "cardiologist", "dermatologist", "neurologist", "pediatrician", "family medicine", "internal medicine", "general practitioner"],
+  "Dentist": ["dentist", "dental", "dentistry", "orthodontist", "oral surgeon", "periodontist", "endodontist", "dental hygienist", "cosmetic dentist", "pediatric dentist", "dental clinic", "oral health"],
+  "Veterinarian": ["vet", "veterinarian", "animal hospital", "pet care", "veterinary clinic", "animal doctor", "pet health", "emergency vet", "animal clinic", "pet hospital"],
+  "Chiropractor": ["chiropractor", "chiropractic", "spine care", "back pain", "neck pain", "sports chiropractor", "wellness center", "spinal adjustment"],
+  "Optometrist": ["optometrist", "eye doctor", "vision care", "eye exam", "glasses", "contact lenses", "optical", "eye care", "vision center"],
+  "Pharmacist": ["pharmacist", "pharmacy", "medication", "prescription", "drug store", "clinical pharmacist", "compounding pharmacy"],
+  "Therapist/Counselor": ["therapist", "therapy", "counseling", "mental health", "psychologist", "marriage counselor", "family therapist", "behavioral therapist", "counselor"],
+  "Lawyer/Attorney": ["lawyer", "attorney", "legal", "law firm", "legal services", "litigation", "criminal lawyer", "family lawyer", "corporate lawyer", "personal injury lawyer", "immigration lawyer", "estate planning"],
+  "Accountant": ["accountant", "accounting", "bookkeeping", "tax preparation", "financial services", "CPA", "tax accountant", "business accounting", "tax services"],
+  "Financial Advisor": ["financial advisor", "finance", "investment", "retirement planning", "wealth management", "financial planning", "insurance agent", "financial consultant"],
+  "Insurance Agent": ["insurance agent", "insurance", "auto insurance", "home insurance", "life insurance", "health insurance", "insurance broker", "insurance services"],
+  "Consultant": ["consultant", "consulting", "business consultant", "marketing consultant", "financial consultant", "strategy consultant", "management consultant", "business advisor"],
+  "Contractor": ["contractor", "construction", "home improvement", "general contractor", "renovation", "remodeling", "building contractor", "builder", "home builder"],
+  "Plumber": ["plumber", "plumbing", "plumbing services", "drain cleaning", "pipe repair", "water heater", "emergency plumber", "residential plumber", "commercial plumber"],
+  "Electrician": ["electrician", "electrical", "electrical services", "electrical repair", "wiring", "electrical contractor", "residential electrician", "commercial electrician", "electrical installation"],
+  "HVAC Technician": ["hvac", "heating", "cooling", "air conditioning", "furnace repair", "HVAC contractor", "climate control", "ventilation", "ductwork"],
+  "Roofer": ["roofer", "roofing", "roof repair", "roof replacement", "commercial roofing", "residential roofing", "roof contractor", "gutter services"],
+  "Painter": ["painter", "painting", "house painting", "commercial painting", "interior painting", "exterior painting", "paint contractor"],
+  "Handyman": ["handyman", "home repair", "maintenance", "fix", "installation", "repair services", "home services", "odd jobs"],
+  "Landscaper": ["landscaping", "landscape design", "lawn care", "gardening", "tree service", "irrigation", "hardscaping", "outdoor design", "yard work"],
+  "Hair Salon/Barber": ["salon", "hair salon", "hairstylist", "barber", "beauty salon", "hair cutting", "hair coloring", "beauty services", "barber shop"],
+  "Spa/Massage": ["spa", "massage", "massage therapy", "therapeutic massage", "deep tissue massage", "relaxation massage", "sports massage", "spa services"],
+  "Nail Salon": ["nail salon", "nails", "manicure", "pedicure", "nail art", "nail care", "gel nails", "acrylic nails"],
+  "Fitness/Gym": ["gym", "fitness", "personal trainer", "workout", "fitness center", "health club", "crossfit", "yoga studio", "pilates", "strength training"],
+  "Yoga Instructor": ["yoga", "yoga instructor", "meditation", "mindfulness", "wellness", "spiritual", "holistic health", "yoga studio"],
+  "Nutritionist": ["nutritionist", "nutrition", "dietitian", "meal planning", "weight loss", "health coaching", "wellness", "diet coach"],
+  "Restaurant": ["restaurant", "food", "dining", "cuisine", "chef", "fine dining", "fast food", "local restaurant", "family restaurant", "takeout"],
+  "Cafe/Coffee Shop": ["cafe", "coffee shop", "coffee house", "bistro", "espresso bar", "coffee roaster", "tea house", "local cafe", "specialty coffee", "breakfast cafe"],
+  "Bakery": ["bakery", "baking", "pastry", "bread", "cakes", "cookies", "custom cakes", "wedding cakes", "fresh bread", "pastries", "desserts"],
+  "Catering": ["catering", "caterer", "event catering", "wedding catering", "corporate catering", "party catering", "food service"],
+  "Hotel/Accommodation": ["hotel", "accommodation", "bed and breakfast", "inn", "motel", "guest house", "resort", "hospitality", "lodging", "vacation rental"],
+  "Auto Repair/Mechanic": ["mechanic", "auto repair", "car repair", "automotive", "auto service", "engine repair", "brake repair", "oil change", "transmission repair", "tire service"],
+  "Car Dealer": ["car dealer", "auto", "auto sales", "used cars", "automotive sales", "car lot", "vehicle sales", "car dealership"],
+  "Photographer": ["photographer", "photography", "wedding photographer", "portrait photographer", "event photographer", "commercial photographer", "photo studio", "headshots", "family photographer"],
+  "Graphic Designer": ["graphic designer", "graphic", "logo design", "branding", "marketing materials", "print design", "digital design", "creative services"],
+  "Web Developer": ["web developer", "web", "website design", "digital marketing", "SEO", "web design", "online marketing", "web services"],
+  "Artist": ["artist", "art", "art gallery", "custom art", "portraits", "paintings", "art studio", "creative services"],
+  "Musician/DJ": ["musician", "music", "band", "DJ", "music teacher", "wedding music", "live music", "entertainment", "performer"],
+  "Real Estate Agent": ["realtor", "real estate", "property", "homes", "real estate agent", "broker", "property sales", "residential realtor", "commercial realtor", "listing agent"],
+  "Property Management": ["property management", "property manager", "rental properties", "landlord services", "tenant management", "real estate management"],
+  "Tutor": ["tutor", "tutoring", "education", "academic support", "test prep", "math tutor", "english tutor", "private tutor", "learning center"],
+  "Coach": ["coach", "coaching", "life coach", "business coach", "sports coach", "fitness coach", "career coach", "wellness coach"],
+  "Childcare": ["childcare", "daycare", "preschool", "childcare center", "babysitting", "nursery", "kids care", "early childhood", "child development"],
+  "Wedding Planner": ["wedding planner", "wedding", "bridal", "wedding services", "wedding venue", "wedding coordinator", "event planning"],
+  "Event Planner": ["event planner", "event", "party planning", "corporate events", "special events", "event coordination", "celebration planning"],
+  "Florist": ["florist", "flowers", "floral design", "wedding flowers", "flower arrangements", "flower shop", "event flowers", "bouquets"],
+  "Computer Repair": ["computer repair", "computer", "IT services", "tech support", "computer sales", "laptop repair", "data recovery", "network services"],
+  "Phone Repair": ["phone repair", "mobile", "cell phone store", "mobile device repair", "screen repair", "phone unlocking", "mobile accessories"],
+  "Tech Support": ["tech", "technology", "IT services", "tech support", "software", "hardware", "computer services"],
+  "Retail Store": ["retail", "boutique", "store", "shop", "retail store", "gift shop", "specialty store", "local business", "merchant", "retailer"],
+  "Fashion/Clothing": ["fashion", "fashion designer", "clothing", "boutique", "custom clothing", "alterations", "fashion stylist", "apparel"],
+  "Jewelry Store": ["jeweler", "jewelry", "custom jewelry", "jewelry repair", "engagement rings", "wedding rings", "fine jewelry", "watch repair"],
+  "Moving Company": ["moving", "moving company", "movers", "relocation", "packing services", "local moving", "long distance moving"],
+  "Delivery Service": ["logistics", "shipping", "freight", "delivery service", "courier", "transportation", "logistics company", "warehouse"],
+  "Travel Agent": ["travel", "travel agent", "vacation planning", "tour guide", "travel services", "cruise specialist", "destination wedding"],
+  "Cleaning Service": ["cleaning", "cleaning service", "house cleaning", "commercial cleaning", "carpet cleaning", "window cleaning", "deep cleaning", "maid service"],
+  "Security Services": ["security", "security services", "security guard", "alarm systems", "surveillance", "home security", "security company"],
+  "Pest Control": ["pest", "pest control", "exterminator", "bug control", "rodent control", "termite control", "wildlife removal"],
+  "Locksmith": ["locksmith", "lock repair", "key service", "lock installation", "emergency locksmith", "automotive locksmith"],
+  "Pool Service": ["pool", "pool service", "pool cleaning", "pool maintenance", "pool repair", "swimming pool", "pool contractor"]
 } as const
 
 type ResultItem = {
@@ -2222,7 +2194,6 @@ export default function LeadScraper() {
   const [who, setWho] = useState("")
   const [selectedCountry, setSelectedCountry] = useState("")
   const [selectedCity, setSelectedCity] = useState("")
-  const [selectedBusinessCategory, setSelectedBusinessCategory] = useState("")
   const [selectedBusinessType, setSelectedBusinessType] = useState("")
 
   const [limit, setLimit] = useState(300)
@@ -2265,10 +2236,9 @@ export default function LeadScraper() {
 
   // Get keywords for selected business type
   const getSelectedKeywords = (): string[] => {
-    if (!selectedBusinessCategory || !selectedBusinessType) return []
-    const category = BUSINESS_CATEGORIES[selectedBusinessCategory as keyof typeof BUSINESS_CATEGORIES]
-    if (!category) return []
-    return category[selectedBusinessType as keyof typeof category] || []
+    if (!selectedBusinessType) return []
+    const keywords = BUSINESS_TYPES[selectedBusinessType as keyof typeof BUSINESS_TYPES]
+    return keywords ? [...keywords] : []
   }
 
   const composedQuery = useMemo(() => {
@@ -2277,7 +2247,7 @@ export default function LeadScraper() {
     const w = keywordString || who.trim()
     const l = selectedCity ? `"${selectedCity}"` : ""
     return `site:instagram.com ${w} ${l}`
-  }, [who, selectedCity, selectedBusinessCategory, selectedBusinessType])
+  }, [who, selectedCity, selectedBusinessType])
 
   // Save seen Usernames to localStorage whenever they change
   useEffect(() => {
@@ -2814,35 +2784,16 @@ export default function LeadScraper() {
       <form onSubmit={handleSubmit} className="grid gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="business-category">Business Category</Label>
-            <Select value={selectedBusinessCategory} onValueChange={(value) => {
-              setSelectedBusinessCategory(value)
-              setSelectedBusinessType("") // Reset business type when category changes
-            }}>
-              <SelectTrigger id="business-category" className="text-base">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(BUSINESS_CATEGORIES).map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-2">
             <Label htmlFor="business-type">Business Type</Label>
             <Select 
               value={selectedBusinessType} 
               onValueChange={setSelectedBusinessType}
-              disabled={!selectedBusinessCategory}
             >
               <SelectTrigger id="business-type" className="text-base">
-                <SelectValue placeholder={selectedBusinessCategory ? "Select type" : "Select category first"} />
+                <SelectValue placeholder="Select business type" />
               </SelectTrigger>
               <SelectContent>
-                {selectedBusinessCategory && Object.keys(BUSINESS_CATEGORIES[selectedBusinessCategory as keyof typeof BUSINESS_CATEGORIES] || {}).map((businessType) => (
+                {Object.keys(BUSINESS_TYPES).map((businessType) => (
                   <SelectItem key={businessType} value={businessType}>
                     {businessType}
                   </SelectItem>

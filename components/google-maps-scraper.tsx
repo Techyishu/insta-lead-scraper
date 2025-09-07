@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Search, Download, MapPin, Phone, Building, MessageCircle, CheckCircle, XCircle, Clock } from "lucide-react"
+import { Loader2, Search, Download, MapPin, Phone, Building, MessageCircle, CheckCircle, XCircle, Clock, Database } from "lucide-react"
 
 // Types
 interface GoogleMapsLead {
@@ -266,6 +266,8 @@ export default function GoogleMapsScraper() {
   const [isLoading, setIsLoading] = useState(false)
   const [isValidatingWhatsApp, setIsValidatingWhatsApp] = useState(false)
   const [error, setError] = useState("")
+  const [savingToDatabase, setSavingToDatabase] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
 
   const availableCities = selectedCountry ? COUNTRIES_CITIES[selectedCountry as keyof typeof COUNTRIES_CITIES] || [] : []
 
@@ -393,6 +395,63 @@ export default function GoogleMapsScraper() {
     }
   }
 
+  // Save results to Supabase database
+  const saveToDatabase = async () => {
+    if (leads.length === 0) return
+    
+    setSavingToDatabase(true)
+    setSaveSuccess(null)
+    setError("")
+    
+    try {
+      // Transform leads to match database schema
+      const leadsToSave = leads.map(lead => ({
+        business_name: lead.title || '',
+        address: lead.address || null,
+        phone: lead.phone || null,
+        website: lead.website || null,
+        rating: lead.rating || null,
+        reviews_count: lead.reviewsCount || null,
+        category: businessCategory || lead.category || null,
+        location_searched: selectedCountry === "United States" ? selectedCity : `${selectedCity}, ${selectedCountry}`,
+        latitude: null, // This info isn't available from current scraping
+        longitude: null, // This info isn't available from current scraping
+        place_id: null, // This info isn't available from current scraping
+        is_open: null, // This info isn't available from current scraping
+        opening_hours: null // This info isn't available from current scraping
+      }))
+      
+      const response = await fetch('/api/save-google-maps-leads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          leads: leadsToSave,
+          location: selectedCountry === "United States" ? selectedCity : `${selectedCity}, ${selectedCountry}`,
+          category: businessCategory
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save leads')
+      }
+      
+      setSaveSuccess(`Successfully saved ${data.savedLeads} Google Maps leads to database!`)
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => setSaveSuccess(null), 5000)
+      
+    } catch (error) {
+      console.error('Error saving to database:', error)
+      setError(error instanceof Error ? error.message : 'Failed to save leads to database')
+    } finally {
+      setSavingToDatabase(false)
+    }
+  }
+
   const exportToCSV = () => {
     if (leads.length === 0) return
 
@@ -400,14 +459,14 @@ export default function GoogleMapsScraper() {
     const csvContent = [
       headers.join(","),
       ...leads.map(lead => [
-        `"${lead.title || ""}"`,
-        `"${lead.address || ""}"`,
-        `"${lead.phone || ""}"`,
+        `"${lead.title || ""}",`,
+        `"${lead.address || ""}",`,
+        `"${lead.phone || ""}",`,
+        lead.hasWhatsApp ? "Yes" : "No",
+        `"${lead.website || ""}",`,
         lead.rating || "",
         lead.reviewsCount || "",
-        `"${lead.category || ""}"`,
-        lead.hasWhatsApp ? "Yes" : "No",
-        `"${lead.website || ""}"`,
+        `"${lead.category || businessCategory || ""}",`
       ].join(","))
     ].join("\n")
 
@@ -444,7 +503,7 @@ export default function GoogleMapsScraper() {
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(COUNTRIES_CITIES).map((country) => (
+                  {Object.keys(COUNTRIES_CITIES).filter(country => country.trim() !== "").map((country) => (
                     <SelectItem key={country} value={country}>
                       {country}
                     </SelectItem>
@@ -464,7 +523,7 @@ export default function GoogleMapsScraper() {
                   <SelectValue placeholder={selectedCountry ? "Select city" : "Select country first"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableCities.map((city) => (
+                  {availableCities.filter(city => city.trim() !== "").map((city) => (
                     <SelectItem key={city} value={city}>
                       {city}
                     </SelectItem>
@@ -480,7 +539,7 @@ export default function GoogleMapsScraper() {
                   <SelectValue placeholder="Select business category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {BUSINESS_CATEGORIES.map((category) => (
+                  {BUSINESS_CATEGORIES.filter(category => category.trim() !== "").map((category) => (
                     <SelectItem key={category} value={category}>
                       {category.charAt(0).toUpperCase() + category.slice(1)}
                     </SelectItem>
@@ -550,6 +609,15 @@ export default function GoogleMapsScraper() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+      
+      {/* Success Alert */}
+      {saveSuccess && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertTitle className="text-green-800">Success</AlertTitle>
+          <AlertDescription className="text-green-700">{saveSuccess}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Results */}
       {leads.length > 0 && (
@@ -570,10 +638,32 @@ export default function GoogleMapsScraper() {
                 </span>
               )}
             </CardTitle>
-            <Button onClick={exportToCSV} variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" />
-              Export CSV
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={saveToDatabase} 
+                variant="outline" 
+                size="sm"
+                disabled={savingToDatabase}
+                className="bg-transparent text-blue-700 border-blue-300 hover:bg-blue-50"
+              >
+                {savingToDatabase ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Database className="mr-2 h-4 w-4" />
+                    Save to Database
+                  </>
+                )}
+              </Button>
+              
+              <Button onClick={exportToCSV} variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">

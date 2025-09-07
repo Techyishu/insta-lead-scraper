@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
     
+    console.log('Fetching Instagram leads with limit:', limit, 'offset:', offset)
+    
     const { data: leads, error } = await supabase
       .from('instagram_leads')
       .select('*')
@@ -15,8 +17,10 @@ export async function GET(request: NextRequest) {
     
     if (error) {
       console.error('Error fetching Instagram leads:', error)
-      return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to fetch leads', details: error.message }, { status: 500 })
     }
+    
+    console.log('Fetched leads:', leads?.length || 0, 'leads')
     
     // Get total count
     const { count, error: countError } = await supabase

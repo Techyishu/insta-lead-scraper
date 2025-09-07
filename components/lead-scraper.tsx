@@ -2746,28 +2746,33 @@ export default function LeadScraper() {
   // Fetch history leads from Supabase
   const fetchHistoryLeads = async (reset = false) => {
     setLoadingHistory(true)
+    setError("")
     
     try {
       const currentOffset = reset ? 0 : historyOffset
       const endpoint = historyType === 'instagram' ? '/api/get-instagram-leads' : '/api/get-google-maps-leads'
       
+      console.log('Fetching history:', endpoint, 'offset:', currentOffset)
+      
       const response = await fetch(`${endpoint}?limit=50&offset=${currentOffset}`)
       const data = await response.json()
+      
+      console.log('History response:', data)
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch history')
       }
       
       if (reset) {
-        setHistoryLeads(data.leads)
+        setHistoryLeads(data.leads || [])
         setHistoryOffset(50)
       } else {
-        setHistoryLeads(prev => [...prev, ...data.leads])
+        setHistoryLeads(prev => [...prev, ...(data.leads || [])])
         setHistoryOffset(prev => prev + 50)
       }
       
-      setHistoryTotal(data.total)
-      setHistoryHasMore(data.hasMore)
+      setHistoryTotal(data.total || 0)
+      setHistoryHasMore(data.hasMore || false)
       
     } catch (error) {
       console.error('Error fetching history:', error)
@@ -2787,18 +2792,31 @@ export default function LeadScraper() {
     
     try {
       // Transform results to match database schema
-      const leadsToSave = results.map(result => ({
-        username: result.username || '',
-        full_name: result.fullName || null,
-        bio: result.bio || null,
-        followers_count: result.followers || null,
-        following_count: result.following || null,
-        posts_count: result.posts || null,
-        is_verified: result.verified || false,
-        is_private: false, // This info isn't available from scraping
-        profile_pic_url: result.profilePicUrl || null,
-        external_url: result.externalUrl || null
-      }))
+      console.log('Results to save:', results)
+      
+      const leadsToSave = results.map(result => {
+        // Extract username from URL if not directly available
+        let username = result.username
+        if (!username && result.url) {
+          const urlMatch = result.url.match(/instagram\.com\/([^\/\?]+)/)
+          username = urlMatch ? urlMatch[1] : ''
+        }
+        
+        return {
+          username: username || '',
+          full_name: result.fullName || null,
+          bio: result.bio || null,
+          followers_count: result.followers || null,
+          following_count: result.following || null,
+          posts_count: result.posts || null,
+          is_verified: result.verified || false,
+          is_private: false, // This info isn't available from scraping
+          profile_pic_url: result.profilePicUrl || null,
+          external_url: result.externalUrl || null
+        }
+      })
+      
+      console.log('Transformed leads to save:', leadsToSave)
       
       const response = await fetch('/api/save-instagram-leads', {
         method: 'POST',

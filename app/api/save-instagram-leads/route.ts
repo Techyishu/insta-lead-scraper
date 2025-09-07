@@ -3,7 +3,8 @@ import { supabase, InstagramLead } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const leads: InstagramLead[] = await request.json()
+    const requestData = await request.json()
+    const leads: InstagramLead[] = Array.isArray(requestData) ? requestData : requestData.leads
 
     if (!leads || !Array.isArray(leads) || leads.length === 0) {
       return NextResponse.json(

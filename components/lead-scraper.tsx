@@ -2170,7 +2170,7 @@ const BUSINESS_TYPES = {
   "Pool Service": ["pool", "pool service", "pool cleaning", "pool maintenance", "pool repair", "swimming pool", "pool contractor"]
 } as const
 
-type ResultItem = {
+interface ResultItem {
   title: string
   url: string
   username?: string
@@ -2188,6 +2188,19 @@ type ResultItem = {
     phone?: string
     address?: string
   }
+  // Database schema fields
+  email?: string
+  phone?: string
+  address?: string
+  // Alternative field names for database compatibility
+  followers_count?: number
+  following_count?: number
+  posts_count?: number
+  is_verified?: boolean
+  is_private?: boolean
+  profile_pic_url?: string
+  external_url?: string
+  source_url?: string
 }
 
 export default function LeadScraper() {
@@ -2787,64 +2800,104 @@ export default function LeadScraper() {
     if (results.length === 0) return
     
     setSavingToDatabase(true)
-    setSaveSuccess(null)
-    setError(null)
-    
+    setError("")
+    setSaveSuccess("")
+
     try {
       // Transform results to match database schema
-      console.log('Results to save:', results)
-      
-      const leadsToSave = results.map(result => {
-        // Extract username from URL if not directly available
+      const leadsToSave = results.map((result, index) => {
+        // Debug log for each result
+        console.log(`Processing result ${index + 1}:`, result)
+        
+        // Extract username from URL if not provided
         let username = result.username
         if (!username && result.url) {
-          const urlMatch = result.url.match(/instagram\.com\/([^\/\?]+)/)
-          username = urlMatch ? urlMatch[1] : ''
+          const urlMatch = result.url.match(/instagram\.com\/([^\/\?]+)/) || 
+                         result.url.match(/\.com\/([^\/\?]+)/)
+          if (urlMatch && urlMatch[1]) {
+            username = urlMatch[1].replace('@', '').trim()
+            console.log(`Extracted username from URL: ${username}`)
+          }
         }
         
-        return {
-          username: username || '',
-          full_name: result.fullName || null,
-          bio: result.bio || null,
-          followers_count: result.followers || null,
-          following_count: result.following || null,
-          posts_count: result.posts || null,
-          is_verified: result.verified || false,
-          is_private: false, // This info isn't available from scraping
-          profile_pic_url: result.profilePicUrl || null,
-          external_url: result.externalUrl || null
+        // Create the lead object with all required fields
+        const lead = {
+          username: username || `user_${Date.now()}_${index}`,
+          full_name: result.fullName || result.title || 'Unknown',
+          bio: result.bio || '',
+          followers_count: result.followers || result.followers_count || 0,
+          following_count: result.following || result.following_count || 0,
+          posts_count: result.posts || result.posts_count || 0,
+          is_verified: result.verified || result.is_verified || false,
+          is_private: result.is_private || false,
+          profile_pic_url: result.profilePicUrl || result.profile_pic_url || '',
+          external_url: result.externalUrl || result.external_url || '',
+          email: result.email || (result.contactInfo?.email || ''),
+          phone: result.phone || (result.contactInfo?.phone || ''),
+          address: result.address || (result.contactInfo?.address || ''),
+          source_url: result.url || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
-      })
-      
-      console.log('Transformed leads to save:', leadsToSave)
-      
+        
+        // Validate required fields
+        if (!lead.username) {
+          console.warn(`Skipping lead ${index} - missing username`)
+          return null
+        }
+        
+        console.log(`Processed lead ${index + 1}:`, lead)
+        return lead
+      }).filter(Boolean) // Remove any null entries
+
+      if (leadsToSave.length === 0) {
+        throw new Error('No valid leads to save. Please check the data and try again.')
+      }
+
+      console.log('Saving leads to database:', leadsToSave)
+
       const response = await fetch('/api/save-instagram-leads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(leadsToSave)
+        body: JSON.stringify(leadsToSave),
       })
-      
-      const data = await response.json()
+
+      const responseData = await response.json()
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to save leads')
+        console.error('Save failed:', responseData)
+        throw new Error(responseData.error || 'Failed to save leads to database')
       }
-      
-      setSaveSuccess(`Successfully saved ${data.savedLeads} Instagram leads to database!`)
+
+      console.log('Save response:', responseData)
+      setSaveSuccess(`Successfully saved ${leadsToSave.length} leads to the database`)
       
       // Clear success message after 5 seconds
-      setTimeout(() => setSaveSuccess(null), 5000)
+      const successTimer = setTimeout(() => setSaveSuccess(""), 5000)
       
-    } catch (error) {
+      // Refresh the history after saving
+      fetchHistoryLeads(true)
+      
+      // Cleanup timer on component unmount
+      return () => clearTimeout(successTimer)
+      
+    } catch (error: any) {
       console.error('Error saving to database:', error)
-      setError(error instanceof Error ? error.message : 'Failed to save leads to database')
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to save leads to database'
+      setError(errorMessage)
+      
+      // Clear error after 5 seconds
+      const errorTimer = setTimeout(() => setError(""), 5000)
+      return () => clearTimeout(errorTimer)
+      
     } finally {
       setSavingToDatabase(false)
     }
   }
 
+// ... (rest of the code remains the same)
   // Download results as CSV
   const downloadCSV = () => {
     if (results.length === 0) return

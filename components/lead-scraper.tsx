@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Search, Download, Lightbulb, Copy, CheckCircle, MapPin, Database, History, RefreshCw } from "lucide-react"
+import { Loader2, Search, Download, Lightbulb, Copy, CheckCircle, MapPin } from "lucide-react"
 import GoogleMapsScraper from "./google-maps-scraper"
 
 // Types
@@ -2170,7 +2170,7 @@ const BUSINESS_TYPES = {
   "Pool Service": ["pool", "pool service", "pool cleaning", "pool maintenance", "pool repair", "swimming pool", "pool contractor"]
 } as const
 
-interface ResultItem {
+type ResultItem = {
   title: string
   url: string
   username?: string
@@ -2188,19 +2188,6 @@ interface ResultItem {
     phone?: string
     address?: string
   }
-  // Database schema fields
-  email?: string
-  phone?: string
-  address?: string
-  // Alternative field names for database compatibility
-  followers_count?: number
-  following_count?: number
-  posts_count?: number
-  is_verified?: boolean
-  is_private?: boolean
-  profile_pic_url?: string
-  external_url?: string
-  source_url?: string
 }
 
 export default function LeadScraper() {
@@ -2244,17 +2231,6 @@ export default function LeadScraper() {
   const [loadingDMIdeas, setLoadingDMIdeas] = useState(false)
   const [dmError, setDmError] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
-  const [savingToDatabase, setSavingToDatabase] = useState(false)
-  const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
-  
-  // History state
-  const [historyLeads, setHistoryLeads] = useState<any[]>([])
-  const [historyType, setHistoryType] = useState<'instagram' | 'google-maps'>('instagram')
-  const [loadingHistory, setLoadingHistory] = useState(false)
-  const [historyTotal, setHistoryTotal] = useState(0)
-  const [historyOffset, setHistoryOffset] = useState(0)
-  const [historyHasMore, setHistoryHasMore] = useState(false)
-  const [serviceOffering, setServiceOffering] = useState("")
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -2737,16 +2713,11 @@ export default function LeadScraper() {
   const searchDisabled = !who.trim() || !selectedCity.trim()
 
   // Get available cities for selected country
-  const availableCities = useMemo(() => {
+  const availableCities: string[] = React.useMemo(() => {
     if (!selectedCountry) return []
-    return COUNTRIES_CITIES[selectedCountry as keyof typeof COUNTRIES_CITIES] || []
+    const cities = COUNTRIES_CITIES[selectedCountry as keyof typeof COUNTRIES_CITIES]
+    return Array.isArray(cities) ? [...cities] : []
   }, [selectedCountry])
-
-  // Get available business types for selected industry
-  const availableDMBusinessTypes = useMemo(() => {
-    if (!selectedIndustry) return []
-    return INDUSTRY_BUSINESS_TYPES[selectedIndustry as keyof typeof INDUSTRY_BUSINESS_TYPES] || []
-  }, [selectedIndustry])
 
   // Handle country change and reset city selection
   const handleCountryChange = (country: string) => {
@@ -2756,148 +2727,6 @@ export default function LeadScraper() {
     setSeenUsernames(new Set()) // Reset seen usernames when country changes
   }
 
-  // Fetch history leads from Supabase
-  const fetchHistoryLeads = async (reset = false) => {
-    setLoadingHistory(true)
-    setError("")
-    
-    try {
-      const currentOffset = reset ? 0 : historyOffset
-      const endpoint = historyType === 'instagram' ? '/api/get-instagram-leads' : '/api/get-google-maps-leads'
-      
-      console.log('Fetching history:', endpoint, 'offset:', currentOffset)
-      
-      const response = await fetch(`${endpoint}?limit=50&offset=${currentOffset}`)
-      const data = await response.json()
-      
-      console.log('History response:', data)
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch history')
-      }
-      
-      if (reset) {
-        setHistoryLeads(data.leads || [])
-        setHistoryOffset(50)
-      } else {
-        setHistoryLeads(prev => [...prev, ...(data.leads || [])])
-        setHistoryOffset(prev => prev + 50)
-      }
-      
-      setHistoryTotal(data.total || 0)
-      setHistoryHasMore(data.hasMore || false)
-      
-    } catch (error) {
-      console.error('Error fetching history:', error)
-      setError(error instanceof Error ? error.message : 'Failed to fetch history')
-    } finally {
-      setLoadingHistory(false)
-    }
-  }
-
-  // Save results to Supabase database
-  const saveToDatabase = async () => {
-    if (results.length === 0) return
-    
-    setSavingToDatabase(true)
-    setError("")
-    setSaveSuccess("")
-
-    try {
-      // Transform results to match database schema
-      const leadsToSave = results.map((result, index) => {
-        // Debug log for each result
-        console.log(`Processing result ${index + 1}:`, result)
-        
-        // Extract username from URL if not provided
-        let username = result.username
-        if (!username && result.url) {
-          const urlMatch = result.url.match(/instagram\.com\/([^\/\?]+)/) || 
-                         result.url.match(/\.com\/([^\/\?]+)/)
-          if (urlMatch && urlMatch[1]) {
-            username = urlMatch[1].replace('@', '').trim()
-            console.log(`Extracted username from URL: ${username}`)
-          }
-        }
-        
-        // Create the lead object with all required fields
-        const lead = {
-          username: username || `user_${Date.now()}_${index}`,
-          full_name: result.fullName || result.title || 'Unknown',
-          bio: result.bio || '',
-          followers_count: result.followers || result.followers_count || 0,
-          following_count: result.following || result.following_count || 0,
-          posts_count: result.posts || result.posts_count || 0,
-          is_verified: result.verified || result.is_verified || false,
-          is_private: result.is_private || false,
-          profile_pic_url: result.profilePicUrl || result.profile_pic_url || '',
-          external_url: result.externalUrl || result.external_url || '',
-          email: result.email || (result.contactInfo?.email || ''),
-          phone: result.phone || (result.contactInfo?.phone || ''),
-          address: result.address || (result.contactInfo?.address || ''),
-          source_url: result.url || '',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-        
-        // Validate required fields
-        if (!lead.username) {
-          console.warn(`Skipping lead ${index} - missing username`)
-          return null
-        }
-        
-        console.log(`Processed lead ${index + 1}:`, lead)
-        return lead
-      }).filter(Boolean) // Remove any null entries
-
-      if (leadsToSave.length === 0) {
-        throw new Error('No valid leads to save. Please check the data and try again.')
-      }
-
-      console.log('Saving leads to database:', leadsToSave)
-
-      const response = await fetch('/api/save-instagram-leads', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(leadsToSave),
-      })
-
-      const responseData = await response.json()
-      
-      if (!response.ok) {
-        console.error('Save failed:', responseData)
-        throw new Error(responseData.error || 'Failed to save leads to database')
-      }
-
-      console.log('Save response:', responseData)
-      setSaveSuccess(`Successfully saved ${leadsToSave.length} leads to the database`)
-      
-      // Clear success message after 5 seconds
-      const successTimer = setTimeout(() => setSaveSuccess(""), 5000)
-      
-      // Refresh the history after saving
-      fetchHistoryLeads(true)
-      
-      // Cleanup timer on component unmount
-      return () => clearTimeout(successTimer)
-      
-    } catch (error: any) {
-      console.error('Error saving to database:', error)
-      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to save leads to database'
-      setError(errorMessage)
-      
-      // Clear error after 5 seconds
-      const errorTimer = setTimeout(() => setError(""), 5000)
-      return () => clearTimeout(errorTimer)
-      
-    } finally {
-      setSavingToDatabase(false)
-    }
-  }
-
-// ... (rest of the code remains the same)
   // Download results as CSV
   const downloadCSV = () => {
     if (results.length === 0) return
@@ -2911,11 +2740,11 @@ export default function LeadScraper() {
         `"${result.username || ''}",`,
         `"${result.fullName || ''}",`,
         `"${(result.bio || '').replace(/"/g, '""')}",`,
-        `"${result.followers || ''}",`,
-        `"${result.following || ''}",`,
-        `"${result.posts || ''}",`,
-        `"${result.verified ? 'Yes' : 'No'}",`,
-        `"${result.businessAccount ? 'Yes' : 'No'}",`,
+        result.followers || 0,
+        result.following || 0,
+        result.posts || 0,
+        result.verified || false,
+        result.businessAccount || false,
         `"${result.profilePicUrl || ''}",`,
         `"${result.externalUrl || ''}",`,
         `"${result.contactInfo?.email || ''}",`,
@@ -2936,286 +2765,398 @@ export default function LeadScraper() {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-4 space-y-6">
+    <div className="grid gap-4 sm:gap-6">
       <Tabs defaultValue="lead-scraper" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="scraper">Lead Scraper</TabsTrigger>
-          <TabsTrigger value="maps">
-            <MapPin className="mr-2 h-4 w-4" />
-            Google Maps
-          </TabsTrigger>
-          <TabsTrigger value="history">
-            <History className="mr-2 h-4 w-4" />
-            History
-          </TabsTrigger>
-          <TabsTrigger value="dm-ideas">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="lead-scraper">Lead Scraper</TabsTrigger>
+          <TabsTrigger value="ai-dm-ideas">
             <Lightbulb className="mr-2 h-4 w-4" />
             AI DM Ideas
           </TabsTrigger>
+          <TabsTrigger value="google-maps">
+            <MapPin className="mr-2 h-4 w-4" />
+            Google Maps
+          </TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="lead-scraper" className="space-y-4">
+          <div className="grid gap-4 sm:gap-6">
+      <form onSubmit={handleSubmit} className="grid gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="business-type">Business Type</Label>
+            <Select 
+              value={selectedBusinessType} 
+              onValueChange={setSelectedBusinessType}
+            >
+              <SelectTrigger id="business-type" className="text-base">
+                <SelectValue placeholder="Select business type" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.keys(BUSINESS_TYPES).map((businessType) => (
+                  <SelectItem key={businessType} value={businessType}>
+                    {businessType}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="country">Country</Label>
+            <Select value={selectedCountry} onValueChange={handleCountryChange}>
+              <SelectTrigger id="country" className="text-base">
+                <SelectValue placeholder="Select country" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.keys(COUNTRIES_CITIES).map((country) => (
+                  <SelectItem key={country} value={country}>
+                    {country}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="city">City</Label>
+            <Select 
+              value={selectedCity} 
+              onValueChange={setSelectedCity}
+              disabled={!selectedCountry}
+            >
+              <SelectTrigger id="city" className="text-base">
+                <SelectValue placeholder={selectedCountry ? "Select city" : "Select country first"} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCities.map((city: string) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="pages">Pages to Scrape</Label>
+            <Input
+              id="pages"
+              type="number"
+              min="1"
+              max="3"
+              placeholder="3"
+              value={pagesToScrape}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 1
+                setPagesToScrape(Math.min(Math.max(value, 1), 3))
+              }}
+              className="text-base"
+            />
+            <p className="text-xs text-muted-foreground">
+              1-3 pages (100 results each)
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="limit">Max Results</Label>
+            <Input
+              id="limit"
+              type="number"
+              min="100"
+              max="300"
+              placeholder="300"
+              value={limit}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 100
+                setLimit(Math.min(Math.max(value, 100), 300))
+              }}
+              className="text-base"
+            />
+            <p className="text-xs text-muted-foreground">
+              100-300 results (default: 300)
+              {limit > 200 && (
+                <span className="block text-orange-600 mt-1">
+                  ⚠️ Large limits may take longer to process
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+        
+        {/* Show selected keywords */}
+        {selectedBusinessType && getSelectedKeywords().length > 0 && (
+          <div className="p-4 bg-muted/50 rounded-lg border">
+            <h4 className="text-sm font-medium mb-2">Search Keywords for {selectedBusinessType}:</h4>
+            <div className="flex flex-wrap gap-1">
+              {getSelectedKeywords().slice(0, 10).map((keyword) => (
+                <span key={keyword} className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium">
+                  {keyword}
+                </span>
+              ))}
+              {getSelectedKeywords().length > 10 && (
+                <span className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs">
+                  +{getSelectedKeywords().length - 10} more
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Optional manual keyword input */}
+        <div className="grid gap-2">
+          <Label htmlFor="manual-keywords">Additional Keywords (Optional)</Label>
+          <Input
+            id="manual-keywords"
+            placeholder="Add custom keywords separated by commas..."
+            value={who}
+            onChange={(e) => setWho(e.target.value)}
+            className="text-base"
+          />
+          <p className="text-xs text-muted-foreground">
+            Use this field to add custom keywords or override the business type selection
+          </p>
+        </div>
 
-        <TabsContent value="scraper" className="space-y-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="who">What/Who</Label>
-                    <Input
-                      id="who"
-                      placeholder="e.g., restaurant, dentist, gym"
-                      value={who}
-                      onChange={(e) => setWho(e.target.value)}
-                      className="text-base"
-                    />
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="country">Country</Label>
-                    <Select value={selectedCountry} onValueChange={handleCountryChange}>
-                      <SelectTrigger id="country" className="text-base">
-                        <SelectValue placeholder="Select country" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(COUNTRIES_CITIES).filter(country => country.trim() !== "").map((country, index) => (
-                          <SelectItem key={`country-${index}-${country}`} value={country}>
-                            {country}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="city">City/State</Label>
-                    <Select 
-                      value={selectedCity} 
-                      onValueChange={setSelectedCity}
-                      disabled={!selectedCountry}
-                    >
-                      <SelectTrigger id="city" className="text-base">
-                        <SelectValue placeholder={selectedCountry ? "Select city" : "Select country first"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableCities.filter(city => city.trim() !== "").map((city, index) => (
-                          <SelectItem key={`city-${index}-${city}`} value={city}>
-                            {city}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="business-type">Business Type (Optional)</Label>
-                    <Select value={selectedBusinessType} onValueChange={setSelectedBusinessType}>
-                      <SelectTrigger id="business-type" className="text-base">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {Object.keys(BUSINESS_TYPES).filter(type => type.trim() !== "").map((type, index) => (
-                          <SelectItem key={`business-type-${index}-${type}`} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="limit">Results Limit</Label>
-                    <Input
-                      id="limit"
-                      type="number"
-                      min="10"
-                      max="1000"
-                      value={limit}
-                      onChange={(e) => setLimit(Number(e.target.value))}
-                      className="text-base"
-                    />
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="pages">Pages to Scrape</Label>
-                    <Input
-                      id="pages"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={pagesToScrape}
-                      onChange={(e) => setPagesToScrape(Number(e.target.value))}
-                      className="text-base"
-                    />
-                  </div>
-                  
-                  <div className="flex items-end">
-                    <Button 
-                      onClick={handleSubmit} 
-                      disabled={loading || loadingMore || !selectedCountry || !selectedCity}
-                      className="w-full"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Searching...
-                        </>
-                      ) : (
-                        <>
-                          <Search className="mr-2 h-4 w-4" />
-                          Search
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {error && (
-            <Alert variant="destructive">
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+        {composedQuery && (
+          <div className="text-xs sm:text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg border">
+            <div className="font-medium mb-1">Search Query:</div>
+            <code className="text-xs break-all">{composedQuery}</code>
+            <div className="text-xs mt-1 opacity-75">
+              Searching Google for Instagram profiles
+            </div>
+          </div>
+        )}
+        
+        <Button 
+          type="submit" 
+          disabled={loading || !selectedCountry || !selectedCity || (!who.trim() && !selectedBusinessType)}
+          className="w-full sm:w-auto justify-self-start"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Searching...
+            </>
+          ) : (
+            <>
+              <Search className="mr-2 h-4 w-4" />
+              Search Instagram
+            </>
           )}
+        </Button>
+      </form>
+
+      {error && (
+        <Alert variant="destructive" role="alert">
+          <AlertTitle>Request failed</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <Card>
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-3 sm:items-center mb-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-2 w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={downloadCSV}
+                disabled={results.length === 0}
+                className="w-full sm:w-auto bg-transparent text-green-700 border-green-300 hover:bg-green-50"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Download CSV</span>
+                <span className="sm:hidden">Download</span>
+              </Button>
+            
+            {seenUsernames.size > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearDuplicateHistory}
+                className="w-full sm:w-auto bg-transparent text-yellow-700 border-yellow-300 hover:bg-yellow-50"
+                title={`Clear duplicate history (${seenUsernames.size} Usernames tracked)`}
+              >
+                <span className="mr-2">🔄</span>
+                <span className="hidden sm:inline">Clear Duplicates ({seenUsernames.size})</span>
+                <span className="sm:hidden">Clear ({seenUsernames.size})</span>
+              </Button>
+            )}
+          </div>
+        </div>
+        </CardContent>
+      </Card>
+
+      {loading && (
+        <Alert>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertTitle>Loading...</AlertTitle>
+          <AlertDescription>Fetching results from Apify. This may take a few seconds.</AlertDescription>
+        </Alert>
+      )}
+
+      {error && (
+        <Alert variant="destructive" role="alert">
+          <AlertTitle>Request failed</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <Card className="border-border/60">
+        <CardContent className="p-0">
+          <div className="p-3 sm:p-4 border-b">
+            <h2 className="text-base sm:text-lg font-medium">Results</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              Showing Google results filtered to Instagram.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                Total: {results.length}
+              </span>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                Pages: {pagesToScrape} × 100 = {pagesToScrape * 100} max
+              </span>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                Limit: {limit}
+              </span>
+              {duplicatesFiltered > 0 && (
+                <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded-full border border-yellow-200">
+                  🔄 {duplicatesFiltered} duplicates filtered
+                </span>
+              )}
+              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                📄 Multi-page scraping enabled
+              </span>
+
+            </div>
+          </div>
           
-          {saveSuccess && (
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-800">Success</AlertTitle>
-              <AlertDescription className="text-green-700">{saveSuccess}</AlertDescription>
-            </Alert>
-          )}
-          
-          {results.length > 0 && (
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={saveToDatabase}
-                      disabled={results.length === 0 || savingToDatabase}
-                      className="w-full sm:w-auto bg-transparent text-blue-700 border-blue-300 hover:bg-blue-50"
-                    >
-                      {savingToDatabase ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          <span className="hidden sm:inline">Saving...</span>
-                          <span className="sm:hidden">Saving</span>
-                        </>
-                      ) : (
-                        <>
-                          <Database className="mr-2 h-4 w-4" />
-                          <span className="hidden sm:inline">Save to Database</span>
-                          <span className="sm:hidden">Save DB</span>
-                        </>
-                      )}
-                    </Button>
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={downloadCSV}
-                      disabled={results.length === 0}
-                      className="w-full sm:w-auto bg-transparent text-green-700 border-green-300 hover:bg-green-50"
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      <span className="hidden sm:inline">Download CSV</span>
-                      <span className="sm:hidden">Download</span>
-                    </Button>
-                  </div>
+          {/* Mobile/Tablet Card Layout */}
+          <div className="block xl:hidden">
+            <div className="max-h-[70vh] overflow-y-auto">
+              {results.length === 0 && !loading ? (
+                <div className="p-6 text-center text-muted-foreground">
+                  <div className="text-sm">No results yet.</div>
+                  <div className="text-xs mt-1">Try a search above or import a results JSON file.</div>
                 </div>
-                
-                {/* Results Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-300">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="border border-gray-300 px-4 py-2 text-left">Profile</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Username</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Full Name</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Bio</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Followers</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Following</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Posts</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Verified</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {results.map((result, index) => (
-                        <tr key={`result-${index}-${result.username || result.url}`} className="hover:bg-gray-50">
-                          <td className="border border-gray-300 px-4 py-2">
-                            {result.profilePicUrl ? (
-                              <img 
-                                src={result.profilePicUrl} 
-                                alt={result.username || 'Profile'} 
-                                className="w-10 h-10 rounded-full object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                <span className="text-gray-500 text-xs">No Pic</span>
-                              </div>
-                            )}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <a 
-                              href={result.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline"
-                            >
-                              @{result.username || 'N/A'}
-                            </a>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">{result.fullName || 'N/A'}</td>
-                          <td className="border border-gray-300 px-4 py-2 max-w-xs">
-                            <div className="truncate" title={result.bio || 'N/A'}>
-                              {result.bio || 'N/A'}
+              ) : (
+                <div className="divide-y divide-border">
+                  {Array.isArray(results) && results.map((r, idx) => (
+                    <div key={r.url || `result-${idx}`} className="p-3 sm:p-4 space-y-3">
+                      <div className="space-y-1">
+                        <div className="font-medium text-sm leading-tight break-words">
+                          {r.title}
+                        </div>
+                        {r.fullName && r.fullName !== r.title && (
+                          <div className="text-xs text-muted-foreground">{r.fullName}</div>
+                        )}
+                        <div className="text-xs">
+                          <a
+                            href={r.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted-foreground underline underline-offset-2 break-all hover:text-foreground"
+                          >
+                            {r.url}
+                          </a>
+                        </div>
+                      </div>
+                          {r.username && (
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              <span className="font-medium">@{r.username}</span>
+                              {r.verified && <span className="text-blue-500">✓</span>}
+                              {r.followers && (
+                                <span className="text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                                  {r.followers.toLocaleString()} followers
+                                </span>
+                              )}
                             </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">{result.followers?.toLocaleString() || 'N/A'}</td>
-                          <td className="border border-gray-300 px-4 py-2">{result.following?.toLocaleString() || 'N/A'}</td>
-                          <td className="border border-gray-300 px-4 py-2">{result.posts?.toLocaleString() || 'N/A'}</td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            {result.verified ? (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
-                            ) : (
-                              <span className="text-gray-400">No</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          )}
+                    </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+              )}
+            </div>
+          </div>
 
-        <TabsContent value="dm-ideas" className="space-y-4">
-          <div className="space-y-4">
+          {/* Desktop Table Layout */}
+          <div className="hidden xl:block">
+            <div className="max-h-[70vh] overflow-y-auto">
+              <Table className="relative w-full table-fixed">
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead className="w-1/2">Name/Title</TableHead>
+                    <TableHead className="w-1/2">URL</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {results.length === 0 && !loading ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
+                        <div className="text-sm">No results yet.</div>
+                        <div className="text-xs mt-1">Try a search above or import a results JSON file.</div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    Array.isArray(results) && results.map((r, idx) => (
+                      <TableRow key={r.url || `table-result-${idx}`} className="hover:bg-muted/50">
+                        <TableCell className="align-top py-3">
+                          <div className="space-y-1 overflow-hidden">
+                            <div className="font-medium text-sm leading-tight truncate" title={r.title}>{r.title}</div>
+                            {r.fullName && r.fullName !== r.title && (
+                              <div className="text-xs text-muted-foreground truncate" title={r.fullName}>{r.fullName}</div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="align-top py-3">
+                          <a
+                            href={r.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-foreground underline underline-offset-2 hover:text-primary block truncate"
+                            title={r.url}
+                          >
+                            {r.url}
+                          </a>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+        </CardContent>
+      </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="ai-dm-ideas" className="space-y-4">
+          <div className="grid gap-4 sm:gap-6">
             <Card>
               <CardContent className="p-6">
                 <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Lightbulb className="h-5 w-5 text-blue-600" />
+                    <h2 className="text-lg font-semibold">AI-Powered Instagram DM Ideas</h2>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Generate personalized Instagram DM templates for reaching out to businesses without websites. 
+                    These AI-generated messages focus on web development services and are designed to be natural, 
+                    conversational, and compliant with Instagram's guidelines.
+                  </p>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="industry">Industry *</Label>
-                      <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
+                      <Select value={selectedIndustry} onValueChange={(value) => {
+                        setSelectedIndustry(value)
+                        setSelectedDMBusinessType("") // Reset business type when industry changes
+                      }}>
                         <SelectTrigger id="industry" className="text-base">
                           <SelectValue placeholder="Select industry" />
                         </SelectTrigger>
                         <SelectContent>
-                          {INDUSTRIES.filter(industry => industry.trim() !== "").map((industry, index) => (
-                            <SelectItem key={`industry-${index}-${industry}`} value={industry}>
+                          {INDUSTRIES.map((industry) => (
+                            <SelectItem key={industry} value={industry}>
                               {industry}
                             </SelectItem>
                           ))}
@@ -3234,8 +3175,8 @@ export default function LeadScraper() {
                           <SelectValue placeholder={selectedIndustry ? "Select business type" : "Select industry first"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {availableDMBusinessTypes.filter(type => type.trim() !== "").map((type, index) => (
-                            <SelectItem key={`dm-business-type-${index}-${type}`} value={type}>
+                          {getAvailableBusinessTypes().map((type: string) => (
+                            <SelectItem key={type} value={type}>
                               {type}
                             </SelectItem>
                           ))}
@@ -3244,16 +3185,6 @@ export default function LeadScraper() {
                     </div>
                   </div>
                   
-                  <div className="grid gap-2">
-                    <Label htmlFor="service-offering">Service/Product Offering *</Label>
-                    <Input
-                      id="service-offering"
-                      placeholder="e.g., Custom web development, SEO services, Logo design..."
-                      value={serviceOffering}
-                      onChange={(e) => setServiceOffering(e.target.value)}
-                      className="text-base"
-                    />
-                  </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="grid gap-2">
@@ -3263,8 +3194,8 @@ export default function LeadScraper() {
                           <SelectValue placeholder="Select tone" />
                         </SelectTrigger>
                         <SelectContent>
-                          {DM_TONES.filter(tone => tone.trim() !== "").map((tone, index) => (
-                            <SelectItem key={`dm-tone-${index}-${tone}`} value={tone}>
+                          {DM_TONES.map((tone) => (
+                            <SelectItem key={tone} value={tone}>
                               {tone}
                             </SelectItem>
                           ))}
@@ -3279,8 +3210,8 @@ export default function LeadScraper() {
                           <SelectValue placeholder="Select approach" />
                         </SelectTrigger>
                         <SelectContent>
-                          {DM_TYPES.filter(type => type.trim() !== "").map((type, index) => (
-                            <SelectItem key={`dm-type-${index}-${type}`} value={type}>
+                          {DM_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
                               {type}
                             </SelectItem>
                           ))}
@@ -3382,176 +3313,8 @@ export default function LeadScraper() {
           </div>
         </TabsContent>
 
-        <TabsContent value="maps" className="space-y-4">
+        <TabsContent value="google-maps" className="space-y-4">
           <GoogleMapsScraper />
-        </TabsContent>
-
-        <TabsContent value="history" className="space-y-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <h3 className="text-lg font-semibold">Saved Leads History</h3>
-                    <Select value={historyType} onValueChange={(value: 'instagram' | 'google-maps') => {
-                      setHistoryType(value)
-                      setHistoryLeads([])
-                      setHistoryOffset(0)
-                    }}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="instagram">Instagram Leads</SelectItem>
-                        <SelectItem value="google-maps">Google Maps Leads</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <Button 
-                    onClick={() => fetchHistoryLeads(true)}
-                    disabled={loadingHistory}
-                    variant="outline"
-                  >
-                    {loadingHistory ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Refresh
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                {historyLeads.length === 0 && !loadingHistory && (
-                  <div className="text-center py-8 text-gray-500">
-                    <History className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                    <p>No saved leads found. Start by scraping and saving some leads!</p>
-                    <Button 
-                      onClick={() => fetchHistoryLeads(true)}
-                      variant="outline"
-                      className="mt-4"
-                    >
-                      Load History
-                    </Button>
-                  </div>
-                )}
-
-                {historyLeads.length > 0 && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600">
-                        Showing {historyLeads.length} of {historyTotal} saved {historyType === 'instagram' ? 'Instagram' : 'Google Maps'} leads
-                      </p>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                      {historyType === 'instagram' ? (
-                        <table className="w-full border-collapse border border-gray-300">
-                          <thead>
-                            <tr className="bg-gray-50">
-                              <th className="border border-gray-300 px-4 py-2 text-left">Username</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Full Name</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Bio</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Followers</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Following</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Verified</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Saved</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {historyLeads.map((lead, index) => (
-                              <tr key={`history-ig-${index}-${lead.id}`} className="hover:bg-gray-50">
-                                <td className="border border-gray-300 px-4 py-2">
-                                  <span className="font-medium">@{lead.username || 'N/A'}</span>
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2">{lead.full_name || 'N/A'}</td>
-                                <td className="border border-gray-300 px-4 py-2 max-w-xs">
-                                  <div className="truncate" title={lead.bio || 'N/A'}>
-                                    {lead.bio || 'N/A'}
-                                  </div>
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2">{lead.followers_count?.toLocaleString() || 'N/A'}</td>
-                                <td className="border border-gray-300 px-4 py-2">{lead.following_count?.toLocaleString() || 'N/A'}</td>
-                                <td className="border border-gray-300 px-4 py-2">
-                                  {lead.is_verified ? (
-                                    <CheckCircle className="h-4 w-4 text-blue-600" />
-                                  ) : (
-                                    <span className="text-gray-400">No</span>
-                                  )}
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-500">
-                                  {new Date(lead.created_at).toLocaleDateString()}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      ) : (
-                        <table className="w-full border-collapse border border-gray-300">
-                          <thead>
-                            <tr className="bg-gray-50">
-                              <th className="border border-gray-300 px-4 py-2 text-left">Business Name</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Address</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Phone</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Category</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Rating</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Location</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Saved</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {historyLeads.map((lead, index) => (
-                              <tr key={`history-gm-${index}-${lead.id}`} className="hover:bg-gray-50">
-                                <td className="border border-gray-300 px-4 py-2 font-medium">{lead.business_name || 'N/A'}</td>
-                                <td className="border border-gray-300 px-4 py-2 max-w-xs">
-                                  <div className="truncate" title={lead.address || 'N/A'}>
-                                    {lead.address || 'N/A'}
-                                  </div>
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2">{lead.phone || 'N/A'}</td>
-                                <td className="border border-gray-300 px-4 py-2">{lead.category || 'N/A'}</td>
-                                <td className="border border-gray-300 px-4 py-2">
-                                  {lead.rating ? `${lead.rating} ⭐` : 'N/A'}
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2">{lead.location_searched || 'N/A'}</td>
-                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-500">
-                                  {new Date(lead.created_at).toLocaleDateString()}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-
-                    {historyHasMore && (
-                      <div className="text-center">
-                        <Button 
-                          onClick={() => fetchHistoryLeads(false)}
-                          disabled={loadingHistory}
-                          variant="outline"
-                        >
-                          {loadingHistory ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Loading...
-                            </>
-                          ) : (
-                            'Load More'
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

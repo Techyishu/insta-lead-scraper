@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Search, Download, Lightbulb, Copy, CheckCircle, MapPin, Database } from "lucide-react"
+import { Loader2, Search, Download, Lightbulb, Copy, CheckCircle, MapPin, Database, History, RefreshCw } from "lucide-react"
 import GoogleMapsScraper from "./google-maps-scraper"
 
 // Types
@@ -2233,6 +2233,14 @@ export default function LeadScraper() {
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const [savingToDatabase, setSavingToDatabase] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
+  
+  // History state
+  const [historyLeads, setHistoryLeads] = useState<any[]>([])
+  const [historyType, setHistoryType] = useState<'instagram' | 'google-maps'>('instagram')
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [historyTotal, setHistoryTotal] = useState(0)
+  const [historyOffset, setHistoryOffset] = useState(0)
+  const [historyHasMore, setHistoryHasMore] = useState(false)
   const [serviceOffering, setServiceOffering] = useState("")
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -2735,6 +2743,40 @@ export default function LeadScraper() {
     setSeenUsernames(new Set()) // Reset seen usernames when country changes
   }
 
+  // Fetch history leads from Supabase
+  const fetchHistoryLeads = async (reset = false) => {
+    setLoadingHistory(true)
+    
+    try {
+      const currentOffset = reset ? 0 : historyOffset
+      const endpoint = historyType === 'instagram' ? '/api/get-instagram-leads' : '/api/get-google-maps-leads'
+      
+      const response = await fetch(`${endpoint}?limit=50&offset=${currentOffset}`)
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch history')
+      }
+      
+      if (reset) {
+        setHistoryLeads(data.leads)
+        setHistoryOffset(50)
+      } else {
+        setHistoryLeads(prev => [...prev, ...data.leads])
+        setHistoryOffset(prev => prev + 50)
+      }
+      
+      setHistoryTotal(data.total)
+      setHistoryHasMore(data.hasMore)
+      
+    } catch (error) {
+      console.error('Error fetching history:', error)
+      setError(error instanceof Error ? error.message : 'Failed to fetch history')
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
   // Save results to Supabase database
   const saveToDatabase = async () => {
     if (results.length === 0) return
@@ -2825,22 +2867,23 @@ export default function LeadScraper() {
   return (
     <div className="w-full max-w-6xl mx-auto p-4 space-y-6">
       <Tabs defaultValue="lead-scraper" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="lead-scraper">
-            <Search className="mr-2 h-4 w-4" />
-            Lead Scraper
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="scraper">Lead Scraper</TabsTrigger>
+          <TabsTrigger value="maps">
+            <MapPin className="mr-2 h-4 w-4" />
+            Google Maps
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            <History className="mr-2 h-4 w-4" />
+            History
           </TabsTrigger>
           <TabsTrigger value="dm-ideas">
             <Lightbulb className="mr-2 h-4 w-4" />
             AI DM Ideas
           </TabsTrigger>
-          <TabsTrigger value="google-maps">
-            <MapPin className="mr-2 h-4 w-4" />
-            Google Maps
-          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="lead-scraper" className="space-y-4">
+        <TabsContent value="scraper" className="space-y-4">
           <Card>
             <CardContent className="p-6">
               <div className="space-y-4">
@@ -3015,6 +3058,72 @@ export default function LeadScraper() {
                       <span className="sm:hidden">Download</span>
                     </Button>
                   </div>
+                </div>
+                
+                {/* Results Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="border border-gray-300 px-4 py-2 text-left">Profile</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Username</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Full Name</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Bio</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Followers</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Following</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Posts</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Verified</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {results.map((result, index) => (
+                        <tr key={`result-${index}-${result.username || result.url}`} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-4 py-2">
+                            {result.profilePicUrl ? (
+                              <img 
+                                src={result.profilePicUrl} 
+                                alt={result.username || 'Profile'} 
+                                className="w-10 h-10 rounded-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <span className="text-gray-500 text-xs">No Pic</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <a 
+                              href={result.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              @{result.username || 'N/A'}
+                            </a>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">{result.fullName || 'N/A'}</td>
+                          <td className="border border-gray-300 px-4 py-2 max-w-xs">
+                            <div className="truncate" title={result.bio || 'N/A'}>
+                              {result.bio || 'N/A'}
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">{result.followers?.toLocaleString() || 'N/A'}</td>
+                          <td className="border border-gray-300 px-4 py-2">{result.following?.toLocaleString() || 'N/A'}</td>
+                          <td className="border border-gray-300 px-4 py-2">{result.posts?.toLocaleString() || 'N/A'}</td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {result.verified ? (
+                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                            ) : (
+                              <span className="text-gray-400">No</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
@@ -3202,8 +3311,176 @@ export default function LeadScraper() {
           </div>
         </TabsContent>
 
-        <TabsContent value="google-maps" className="space-y-4">
+        <TabsContent value="maps" className="space-y-4">
           <GoogleMapsScraper />
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <h3 className="text-lg font-semibold">Saved Leads History</h3>
+                    <Select value={historyType} onValueChange={(value: 'instagram' | 'google-maps') => {
+                      setHistoryType(value)
+                      setHistoryLeads([])
+                      setHistoryOffset(0)
+                    }}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="instagram">Instagram Leads</SelectItem>
+                        <SelectItem value="google-maps">Google Maps Leads</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <Button 
+                    onClick={() => fetchHistoryLeads(true)}
+                    disabled={loadingHistory}
+                    variant="outline"
+                  >
+                    {loadingHistory ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Refresh
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {historyLeads.length === 0 && !loadingHistory && (
+                  <div className="text-center py-8 text-gray-500">
+                    <History className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                    <p>No saved leads found. Start by scraping and saving some leads!</p>
+                    <Button 
+                      onClick={() => fetchHistoryLeads(true)}
+                      variant="outline"
+                      className="mt-4"
+                    >
+                      Load History
+                    </Button>
+                  </div>
+                )}
+
+                {historyLeads.length > 0 && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-gray-600">
+                        Showing {historyLeads.length} of {historyTotal} saved {historyType === 'instagram' ? 'Instagram' : 'Google Maps'} leads
+                      </p>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      {historyType === 'instagram' ? (
+                        <table className="w-full border-collapse border border-gray-300">
+                          <thead>
+                            <tr className="bg-gray-50">
+                              <th className="border border-gray-300 px-4 py-2 text-left">Username</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Full Name</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Bio</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Followers</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Following</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Verified</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Saved</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyLeads.map((lead, index) => (
+                              <tr key={`history-ig-${index}-${lead.id}`} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <span className="font-medium">@{lead.username || 'N/A'}</span>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">{lead.full_name || 'N/A'}</td>
+                                <td className="border border-gray-300 px-4 py-2 max-w-xs">
+                                  <div className="truncate" title={lead.bio || 'N/A'}>
+                                    {lead.bio || 'N/A'}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">{lead.followers_count?.toLocaleString() || 'N/A'}</td>
+                                <td className="border border-gray-300 px-4 py-2">{lead.following_count?.toLocaleString() || 'N/A'}</td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  {lead.is_verified ? (
+                                    <CheckCircle className="h-4 w-4 text-blue-600" />
+                                  ) : (
+                                    <span className="text-gray-400">No</span>
+                                  )}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-500">
+                                  {new Date(lead.created_at).toLocaleDateString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <table className="w-full border-collapse border border-gray-300">
+                          <thead>
+                            <tr className="bg-gray-50">
+                              <th className="border border-gray-300 px-4 py-2 text-left">Business Name</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Address</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Phone</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Category</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Rating</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Location</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Saved</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyLeads.map((lead, index) => (
+                              <tr key={`history-gm-${index}-${lead.id}`} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-4 py-2 font-medium">{lead.business_name || 'N/A'}</td>
+                                <td className="border border-gray-300 px-4 py-2 max-w-xs">
+                                  <div className="truncate" title={lead.address || 'N/A'}>
+                                    {lead.address || 'N/A'}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">{lead.phone || 'N/A'}</td>
+                                <td className="border border-gray-300 px-4 py-2">{lead.category || 'N/A'}</td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  {lead.rating ? `${lead.rating} ⭐` : 'N/A'}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">{lead.location_searched || 'N/A'}</td>
+                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-500">
+                                  {new Date(lead.created_at).toLocaleDateString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+
+                    {historyHasMore && (
+                      <div className="text-center">
+                        <Button 
+                          onClick={() => fetchHistoryLeads(false)}
+                          disabled={loadingHistory}
+                          variant="outline"
+                        >
+                          {loadingHistory ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            'Load More'
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

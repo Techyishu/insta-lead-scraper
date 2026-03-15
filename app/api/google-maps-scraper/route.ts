@@ -33,7 +33,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Make request to Apify API
-    const apifyUrl = 'https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items?token=apify_api_bfCY3i3hhARq3VgB2O3Oyk8Gfu15PP4yDpai'
+    const token = process.env.APIFY_TOKEN_GOOGLE_MAPS
+    if (!token) {
+      return NextResponse.json({ error: 'APIFY_TOKEN_GOOGLE_MAPS is not configured' }, { status: 500 })
+    }
+    const apifyUrl = `https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items?token=${token}`
     const response = await fetch(apifyUrl, {
       method: 'POST',
       headers: {

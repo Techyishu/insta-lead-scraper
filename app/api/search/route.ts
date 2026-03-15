@@ -142,19 +142,22 @@ export async function POST(req: Request) {
     const validatedPage = Math.max(parseInt(String(page)) || 1, 1)
     const validatedPagesToScrape = Math.min(Math.max(parseInt(String(pagesToScrape)) || 1, 1), 3)
 
-    // Set the Apify API key directly
-    const apiToken = "apify_api_FDWcfGexwocA4bRTT9vJvLx1bWSWYx1MMifI"
+    const apiToken = process.env.APIFY_TOKEN_INSTAGRAM
     if (!apiToken) {
       return new Response(
-        "API token not configured. Please set APIFY_API_TOKEN environment variable.",
+        "APIFY_TOKEN_INSTAGRAM is not configured.",
         { status: 500 },
       )
     }
 
     const searchQuery = `site:instagram.com ${String(who).trim()} ${String(location).trim()}`
 
+    const googleSearchToken = process.env.APIFY_TOKEN_GOOGLE_SEARCH
+    if (!googleSearchToken) {
+      return new Response("APIFY_TOKEN_GOOGLE_SEARCH is not configured.", { status: 500 })
+    }
     // Use the dataset-items endpoint with API key
-    const endpoint = "https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token=apify_api_PPtaZ4HcHGNytvmqxe9OB4ZKcy7pVI2TuTEL"
+    const endpoint = `https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token=${googleSearchToken}`
 
     // Calculate pagination parameters for Google Search
     const maxResultsPerPage = 100

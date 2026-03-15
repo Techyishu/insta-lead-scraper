@@ -464,12 +464,6 @@ export default function GoogleMapsScraper() {
 
   const effectiveCategory = businessCategory === "custom" ? customCategory.trim() : businessCategory
 
-  const filteredLeads = leads.filter((lead) => {
-    if (websiteFilter === "with") return !!lead.website
-    if (websiteFilter === "without") return !lead.website
-    return true
-  })
-
   const handleScrape = async () => {
     if (!selectedCountry || (isIndia && !selectedState) || !selectedCity || !effectiveCategory) {
       setError(isIndia ? "Please select country, state, city, and business category" : "Please select country, city, and business category")
@@ -495,7 +489,8 @@ export default function GoogleMapsScraper() {
         body: JSON.stringify({
           locationQuery: locationQuery,
           searchStringsArray: [effectiveCategory],
-          maxCrawledPlacesPerSearch: parseInt(maxResults)
+          maxCrawledPlacesPerSearch: parseInt(maxResults),
+          websiteFilter: websiteFilter,
         }),
       })
 
@@ -599,12 +594,12 @@ export default function GoogleMapsScraper() {
   }
 
   const exportToCSV = () => {
-    if (filteredLeads.length === 0) return
+    if (leads.length === 0) return
 
     const headers = ["Business Name", "Address", "Phone", "WhatsApp Active", "Website", "Rating", "Reviews Count", "Category"]
     const csvContent = [
       headers.join(","),
-      ...filteredLeads.map(lead => [
+      ...leads.map(lead => [
         `"${lead.title || ""}"`,
         `"${lead.address || ""}"`,
         `"${lead.phone || ""}"`,
@@ -821,10 +816,10 @@ export default function GoogleMapsScraper() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Building className="h-5 w-5" />
-              Found {filteredLeads.length}{filteredLeads.length !== leads.length ? ` of ${leads.length}` : ""} Business{filteredLeads.length !== 1 ? 'es' : ''}
-              {validateWhatsApp && filteredLeads.some(lead => lead.hasWhatsApp) && (
+              Found {leads.length} Business{leads.length !== 1 ? 'es' : ''}
+              {validateWhatsApp && leads.some(lead => lead.hasWhatsApp) && (
                 <span className="text-sm font-normal text-green-600">
-                  ({filteredLeads.filter(lead => lead.hasWhatsApp).length} with WhatsApp)
+                  ({leads.filter(lead => lead.hasWhatsApp).length} with WhatsApp)
                 </span>
               )}
               {isValidatingWhatsApp && (
@@ -854,7 +849,7 @@ export default function GoogleMapsScraper() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredLeads.map((lead, index) => (
+                  {leads.map((lead, index) => (
                     <TableRow key={index}>
                       <TableCell className="font-medium">
                         {lead.title || "N/A"}

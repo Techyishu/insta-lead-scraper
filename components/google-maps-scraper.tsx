@@ -84,11 +84,228 @@ const BUSINESS_CATEGORIES = [
   "nonprofit"
 ]
 
+// India: States with all major cities
+const INDIA_STATES_CITIES: Record<string, string[]> = {
+  "Andhra Pradesh": [
+    "Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool",
+    "Tirupati", "Rajahmundry", "Kadapa", "Kakinada", "Anantapur",
+    "Eluru", "Ongole", "Nandyal", "Bhimavaram", "Machilipatnam",
+    "Vizianagaram", "Chittoor", "Proddatur", "Srikakulam", "Hindupur"
+  ],
+  "Arunachal Pradesh": [
+    "Itanagar", "Naharlagun", "Pasighat", "Tezpur", "Bomdila",
+    "Ziro", "Along", "Changlang", "Tezu", "Seppa"
+  ],
+  "Assam": [
+    "Guwahati", "Silchar", "Dibrugarh", "Jorhat", "Nagaon",
+    "Tinsukia", "Tezpur", "Bongaigaon", "Dhubri", "Diphu",
+    "Sivasagar", "Goalpara", "Karimganj", "Golaghat", "Hailakandi",
+    "North Lakhimpur", "Haflong", "Mangaldoi", "Nalbari", "Barpeta"
+  ],
+  "Bihar": [
+    "Patna", "Gaya", "Bhagalpur", "Muzaffarpur", "Darbhanga",
+    "Purnia", "Arrah", "Begusarai", "Katihar", "Munger",
+    "Chapra", "Bihar Sharif", "Saharsa", "Hajipur", "Sitamarhi",
+    "Motihari", "Bettiah", "Supaul", "Siwan", "Nawada",
+    "Aurangabad", "Kishanganj", "Jehanabad", "Buxar", "Samastipur"
+  ],
+  "Chhattisgarh": [
+    "Raipur", "Bhilai", "Bilaspur", "Korba", "Durg",
+    "Rajnandgaon", "Jagdalpur", "Raigarh", "Ambikapur", "Dhamtari",
+    "Chirmiri", "Bhatapara", "Mahasamund", "Kondagaon", "Kanker"
+  ],
+  "Goa": [
+    "Panaji", "Margao", "Vasco da Gama", "Mapusa", "Ponda",
+    "Bicholim", "Curchorem", "Sanquelim", "Cuncolim", "Quepem"
+  ],
+  "Gujarat": [
+    "Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar",
+    "Jamnagar", "Gandhinagar", "Junagadh", "Anand", "Navsari",
+    "Morbi", "Mehsana", "Bharuch", "Valsad", "Surendranagar",
+    "Porbandar", "Amreli", "Godhra", "Nadiad", "Gandhidham",
+    "Botad", "Veraval", "Gondal", "Jetpur", "Palanpur",
+    "Dahod", "Patan", "Kalol", "Kadi", "Dwarka"
+  ],
+  "Haryana": [
+    "Faridabad", "Gurgaon", "Panipat", "Ambala", "Yamunanagar",
+    "Rohtak", "Hisar", "Karnal", "Sonipat", "Panchkula",
+    "Bhiwani", "Bahadurgarh", "Jind", "Thanesar", "Kaithal",
+    "Rewari", "Palwal", "Sirsa", "Fatehabad", "Narnaul",
+    "Hansi", "Mahendragarh", "Nuh", "Hodal", "Pataudi",
+    "Ballabhgarh", "Manesar", "Dharuhera", "Jhajjar", "Charkhi Dadri"
+  ],
+  "Himachal Pradesh": [
+    "Shimla", "Dharamsala", "Solan", "Mandi", "Palampur",
+    "Baddi", "Nahan", "Kullu", "Chamba", "Una",
+    "Bilaspur", "Hamirpur", "Sundernagar", "Kangra", "Nurpur",
+    "Rampur", "Rohru", "Manali", "Kasauli", "Parwanoo"
+  ],
+  "Jharkhand": [
+    "Ranchi", "Jamshedpur", "Dhanbad", "Bokaro", "Hazaribagh",
+    "Deoghar", "Giridih", "Ramgarh", "Phusro", "Chirkunda",
+    "Medininagar", "Chaibasa", "Dumka", "Pakur", "Gumla",
+    "Simdega", "Lohardaga", "Jamtara", "Sahibganj", "Koderma"
+  ],
+  "Karnataka": [
+    "Bangalore", "Mysuru", "Hubli", "Mangalore", "Belgaum",
+    "Davangere", "Bellary", "Shimoga", "Tumkur", "Gulbarga",
+    "Bidar", "Hassan", "Udupi", "Raichur", "Bijapur",
+    "Hospet", "Gadag", "Chitradurga", "Kolar", "Bagalkot",
+    "Mandya", "Chikmagalur", "Dharwad", "Robertsonpet", "Gangavati",
+    "Ranibennur", "Yadgir", "Chamarajanagar", "Haveri", "Karwar"
+  ],
+  "Kerala": [
+    "Thiruvananthapuram", "Kochi", "Kozhikode", "Thrissur", "Kollam",
+    "Palakkad", "Alappuzha", "Malappuram", "Kannur", "Kasaragod",
+    "Kottayam", "Pathanamthitta", "Idukki", "Wayanad", "Ernakulam",
+    "Thalassery", "Kalpetta", "Manjeri", "Tirur", "Ponnani",
+    "Chalakudy", "Irinjalakuda", "Perinthalmanna", "Vatakara", "Kayamkulam"
+  ],
+  "Madhya Pradesh": [
+    "Indore", "Bhopal", "Jabalpur", "Gwalior", "Ujjain",
+    "Sagar", "Dewas", "Satna", "Ratlam", "Rewa",
+    "Murwara", "Singrauli", "Burhanpur", "Khandwa", "Bhind",
+    "Chhindwara", "Guna", "Shivpuri", "Vidisha", "Chhatarpur",
+    "Damoh", "Mandsaur", "Khargone", "Neemuch", "Pithampur",
+    "Hoshangabad", "Itarsi", "Sehore", "Betul", "Seoni"
+  ],
+  "Maharashtra": [
+    "Mumbai", "Pune", "Nagpur", "Thane", "Nashik",
+    "Pimpri-Chinchwad", "Kalyan-Dombivli", "Vasai-Virar", "Aurangabad", "Navi Mumbai",
+    "Solapur", "Mira-Bhayandar", "Bhiwandi", "Amravati", "Nanded",
+    "Kolhapur", "Sangli", "Jalgaon", "Akola", "Latur",
+    "Dhule", "Ahmednagar", "Ichalkaranji", "Chandrapur", "Parbhani",
+    "Jalna", "Osmanabad", "Bid", "Yavatmal", "Ratnagiri",
+    "Wardha", "Gondia", "Bhandara", "Buldhana", "Washim"
+  ],
+  "Manipur": [
+    "Imphal", "Thoubal", "Bishnupur", "Churachandpur", "Senapati",
+    "Ukhrul", "Chandel", "Tamenglong", "Jiribam", "Kakching"
+  ],
+  "Meghalaya": [
+    "Shillong", "Tura", "Nongstoin", "Jowai", "Baghmara",
+    "Resubelpara", "Williamnagar", "Nongpoh", "Mairang", "Cherrapunji"
+  ],
+  "Mizoram": [
+    "Aizawl", "Lunglei", "Saiha", "Champhai", "Kolasib",
+    "Serchhip", "Lawngtlai", "Mamit", "Khawzawl", "Hnahthial"
+  ],
+  "Nagaland": [
+    "Kohima", "Dimapur", "Mokokchung", "Tuensang", "Wokha",
+    "Zunheboto", "Mon", "Phek", "Kiphire", "Longleng"
+  ],
+  "Odisha": [
+    "Bhubaneswar", "Cuttack", "Rourkela", "Brahmapur", "Sambalpur",
+    "Puri", "Balasore", "Bhadrak", "Baripada", "Jharsuguda",
+    "Jeypore", "Bargarh", "Kendujhar", "Angul", "Dhenkanal",
+    "Sundargarh", "Bolangir", "Koraput", "Rayagada", "Parlakhemundi",
+    "Phulbani", "Nabarangpur", "Malkangiri", "Nuapada", "Kalahandi"
+  ],
+  "Punjab": [
+    "Ludhiana", "Amritsar", "Jalandhar", "Patiala", "Bathinda",
+    "Pathankot", "Hoshiarpur", "Batala", "Moga", "Abohar",
+    "Malerkotla", "Khanna", "Phagwara", "Muktsar", "Barnala",
+    "Rajpura", "Firozpur", "Kapurthala", "Sangrur", "Fatehgarh Sahib",
+    "Gurdaspur", "Rupnagar", "Nawanshahr", "Tarn Taran", "Faridkot",
+    "Fazilka", "Mohali", "Zirakpur", "Derabassi", "Morinda"
+  ],
+  "Rajasthan": [
+    "Jaipur", "Jodhpur", "Kota", "Bikaner", "Ajmer",
+    "Udaipur", "Bhilwara", "Alwar", "Sikar", "Sri Ganganagar",
+    "Pali", "Bharatpur", "Barmer", "Nagaur", "Churu",
+    "Jhunjhunu", "Kishangarh", "Beawar", "Hanumangarh", "Tonk",
+    "Sawai Madhopur", "Bundi", "Chittorgarh", "Jhalawar", "Baran",
+    "Dholpur", "Karauli", "Dausa", "Rajsamand", "Dungarpur",
+    "Banswara", "Pratapgarh", "Jaisalmer", "Sirohi", "Jalore"
+  ],
+  "Sikkim": [
+    "Gangtok", "Namchi", "Mangan", "Gyalshing", "Rangpo",
+    "Jorethang", "Singtam", "Ravangla", "Yuksom", "Lachung"
+  ],
+  "Tamil Nadu": [
+    "Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem",
+    "Tirunelveli", "Tiruppur", "Erode", "Vellore", "Thoothukudi",
+    "Dindigul", "Thanjavur", "Ranipet", "Sivakasi", "Karur",
+    "Hosur", "Nagercoil", "Kancheepuram", "Kumarapalayam", "Pudukkottai",
+    "Cuddalore", "Kumbakonam", "Nagapattinam", "Villupuram", "Tiruvannamalai",
+    "Dharmapuri", "Krishnagiri", "Namakkal", "Ariyalur", "Perambalur",
+    "Ramanathapuram", "Virudhunagar", "Theni", "Nilgiris", "Tirupattur"
+  ],
+  "Telangana": [
+    "Hyderabad", "Warangal", "Nizamabad", "Karimnagar", "Khammam",
+    "Ramagundam", "Mahbubnagar", "Nalgonda", "Adilabad", "Suryapet",
+    "Miryalaguda", "Siddipet", "Mancherial", "Jagtial", "Nirmal",
+    "Kothagudem", "Bhongir", "Sangareddy", "Vikarabad", "Narayanpet",
+    "Medak", "Narasaraopet", "Kamareddy", "Jangaon", "Yadadri"
+  ],
+  "Tripura": [
+    "Agartala", "Udaipur", "Dharmanagar", "Kailashahar", "Belonia",
+    "Ambassa", "Khowai", "Teliamura", "Melaghar", "Sonamura"
+  ],
+  "Uttar Pradesh": [
+    "Lucknow", "Kanpur", "Ghaziabad", "Agra", "Meerut",
+    "Varanasi", "Allahabad", "Bareilly", "Aligarh", "Moradabad",
+    "Saharanpur", "Gorakhpur", "Noida", "Mathura", "Rampur",
+    "Shahjahanpur", "Muzaffarnagar", "Firozabad", "Jhansi", "Hapur",
+    "Etawah", "Mirzapur", "Bulandshahr", "Sambhal", "Amroha",
+    "Hardoi", "Fatehpur", "Raebareli", "Orai", "Sitapur",
+    "Lakhimpur", "Unnao", "Jaunpur", "Azamgarh", "Sultanpur",
+    "Faizabad", "Ballia", "Deoria", "Gonda", "Bahraich",
+    "Shravasti", "Basti", "Maharajganj", "Siddharthnagar", "Kushinagar"
+  ],
+  "Uttarakhand": [
+    "Dehradun", "Haridwar", "Roorkee", "Haldwani", "Rudrapur",
+    "Kashipur", "Rishikesh", "Kotdwar", "Ramnagar", "Pithoragarh",
+    "Almora", "Nainital", "Mussoorie", "Pauri", "Tehri",
+    "Uttarkashi", "Chamoli", "Champawat", "Bageshwar", "Udham Singh Nagar"
+  ],
+  "West Bengal": [
+    "Kolkata", "Howrah", "Durgapur", "Asansol", "Siliguri",
+    "Maheshtala", "Rajpur Sonarpur", "South Dumdum", "Bardhaman", "Malda",
+    "Barasat", "Krishnanagar", "North Dumdum", "Medinipur", "Berhampore",
+    "Habra", "Kharagpur", "Shantipur", "Darjeeling", "Jalpaiguri",
+    "Cooch Behar", "Balurghat", "Raiganj", "Haldia", "Bankura",
+    "Purulia", "Bishnupur", "Bolpur", "Tamluk", "Alipurduar"
+  ],
+  "Delhi": [
+    "New Delhi", "North Delhi", "South Delhi", "East Delhi", "West Delhi",
+    "Central Delhi", "Dwarka", "Rohini", "Janakpuri", "Laxmi Nagar",
+    "Pitampura", "Saket", "Vasant Kunj", "Karol Bagh", "Nehru Place",
+    "Connaught Place", "Shahdara", "Preet Vihar", "Mayur Vihar", "Noida Extension"
+  ],
+  "Jammu & Kashmir": [
+    "Srinagar", "Jammu", "Anantnag", "Sopore", "Baramulla",
+    "Udhampur", "Kathua", "Pulwama", "Pampore", "Rajouri",
+    "Poonch", "Reasi", "Doda", "Kishtwar", "Ramban"
+  ],
+  "Ladakh": [
+    "Leh", "Kargil", "Nubra", "Zanskar", "Drass"
+  ],
+  "Chandigarh": [
+    "Chandigarh", "Sector 17", "Sector 22", "Panchkula", "Mohali"
+  ],
+  "Puducherry": [
+    "Puducherry", "Karaikal", "Mahe", "Yanam", "Oulgaret"
+  ],
+  "Andaman & Nicobar": [
+    "Port Blair", "Rangat", "Diglipur", "Car Nicobar", "Mayabunder"
+  ],
+  "Dadra & Nagar Haveli": [
+    "Silvassa", "Amli", "Khanvel", "Naroli", "Rakholi"
+  ],
+  "Daman & Diu": [
+    "Daman", "Diu", "Nani Daman", "Moti Daman", "Vanakbara"
+  ],
+  "Lakshadweep": [
+    "Kavaratti", "Agatti", "Amini", "Andrott", "Minicoy"
+  ]
+}
+
 // Countries & States/Cities with High Potential for Business Scraping
 const COUNTRIES_CITIES = {
   "United States": [
     "Alabama",
-    "Alaska", 
+    "Alaska",
     "Arizona",
     "Arkansas",
     "California",
@@ -222,56 +439,40 @@ const COUNTRIES_CITIES = {
     "Shepparton, Victoria",
     "Port Macquarie, New South Wales"
   ],
-  "India": [
-    "Mumbai, Maharashtra",
-    "Delhi, Delhi",
-    "Bangalore, Karnataka",
-    "Hyderabad, Telangana",
-    "Chennai, Tamil Nadu",
-    "Kolkata, West Bengal",
-    "Pune, Maharashtra",
-    "Ahmedabad, Gujarat",
-    "Surat, Gujarat",
-    "Jaipur, Rajasthan",
-    "Lucknow, Uttar Pradesh",
-    "Kanpur, Uttar Pradesh",
-    "Nagpur, Maharashtra",
-    "Indore, Madhya Pradesh",
-    "Thane, Maharashtra",
-    "Bhopal, Madhya Pradesh",
-    "Visakhapatnam, Andhra Pradesh",
-    "Pimpri-Chinchwad, Maharashtra",
-    "Patna, Bihar",
-    "Vadodara, Gujarat",
-    "Ghaziabad, Uttar Pradesh",
-    "Ludhiana, Punjab",
-    "Agra, Uttar Pradesh",
-    "Nashik, Maharashtra",
-    "Faridabad, Haryana",
-    "Meerut, Uttar Pradesh",
-    "Rajkot, Gujarat",
-    "Kalyan-Dombivli, Maharashtra",
-    "Vasai-Virar, Maharashtra",
-    "Varanasi, Uttar Pradesh"
-  ]
+  "India": []
 }
 
 export default function GoogleMapsScraper() {
   const [selectedCountry, setSelectedCountry] = useState("")
+  const [selectedState, setSelectedState] = useState("")
   const [selectedCity, setSelectedCity] = useState("")
   const [businessCategory, setBusinessCategory] = useState("")
+  const [customCategory, setCustomCategory] = useState("")
   const [maxResults, setMaxResults] = useState("50")
+  const [websiteFilter, setWebsiteFilter] = useState("any")
   const [validateWhatsApp, setValidateWhatsApp] = useState(true)
   const [leads, setLeads] = useState<GoogleMapsLead[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isValidatingWhatsApp, setIsValidatingWhatsApp] = useState(false)
   const [error, setError] = useState("")
 
-  const availableCities = selectedCountry ? COUNTRIES_CITIES[selectedCountry as keyof typeof COUNTRIES_CITIES] || [] : []
+  const isIndia = selectedCountry === "India"
+  const availableStates = isIndia ? Object.keys(INDIA_STATES_CITIES) : []
+  const availableCities = isIndia
+    ? (selectedState ? INDIA_STATES_CITIES[selectedState] || [] : [])
+    : (selectedCountry ? COUNTRIES_CITIES[selectedCountry as keyof typeof COUNTRIES_CITIES] || [] : [])
+
+  const effectiveCategory = businessCategory === "custom" ? customCategory.trim() : businessCategory
+
+  const filteredLeads = leads.filter((lead) => {
+    if (websiteFilter === "with") return !!lead.website
+    if (websiteFilter === "without") return !lead.website
+    return true
+  })
 
   const handleScrape = async () => {
-    if (!selectedCountry || !selectedCity || !businessCategory) {
-      setError("Please select country, city, and business category")
+    if (!selectedCountry || (isIndia && !selectedState) || !selectedCity || !effectiveCategory) {
+      setError(isIndia ? "Please select country, state, city, and business category" : "Please select country, city, and business category")
       return
     }
 
@@ -280,7 +481,11 @@ export default function GoogleMapsScraper() {
     setLeads([])
 
     try {
-      const locationQuery = selectedCountry === "United States" ? selectedCity : `${selectedCity}, ${selectedCountry}`
+      const locationQuery = selectedCountry === "United States"
+        ? selectedCity
+        : isIndia
+          ? `${selectedCity}, ${selectedState}, India`
+          : `${selectedCity}, ${selectedCountry}`
       
       const response = await fetch("/api/google-maps-scraper", {
         method: "POST",
@@ -289,7 +494,7 @@ export default function GoogleMapsScraper() {
         },
         body: JSON.stringify({
           locationQuery: locationQuery,
-          searchStringsArray: [businessCategory],
+          searchStringsArray: [effectiveCategory],
           maxCrawledPlacesPerSearch: parseInt(maxResults)
         }),
       })
@@ -394,12 +599,12 @@ export default function GoogleMapsScraper() {
   }
 
   const exportToCSV = () => {
-    if (leads.length === 0) return
+    if (filteredLeads.length === 0) return
 
     const headers = ["Business Name", "Address", "Phone", "WhatsApp Active", "Website", "Rating", "Reviews Count", "Category"]
     const csvContent = [
       headers.join(","),
-      ...leads.map(lead => [
+      ...filteredLeads.map(lead => [
         `"${lead.title || ""}"`,
         `"${lead.address || ""}"`,
         `"${lead.phone || ""}"`,
@@ -433,12 +638,13 @@ export default function GoogleMapsScraper() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className={`grid grid-cols-1 gap-4 ${isIndia ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
             <div className="space-y-2">
               <Label htmlFor="country">Country *</Label>
               <Select value={selectedCountry} onValueChange={(value) => {
                 setSelectedCountry(value)
-                setSelectedCity("") // Reset city when country changes
+                setSelectedState("")
+                setSelectedCity("")
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select country" />
@@ -453,15 +659,44 @@ export default function GoogleMapsScraper() {
               </Select>
             </div>
 
+            {isIndia && (
+              <div className="space-y-2">
+                <Label htmlFor="state">State *</Label>
+                <Select
+                  value={selectedState}
+                  onValueChange={(value) => {
+                    setSelectedState(value)
+                    setSelectedCity("")
+                  }}
+                  disabled={!selectedCountry}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableStates.map((state) => (
+                      <SelectItem key={state} value={state}>
+                        {state}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="city">City *</Label>
-              <Select 
-                value={selectedCity} 
+              <Select
+                value={selectedCity}
                 onValueChange={setSelectedCity}
-                disabled={!selectedCountry}
+                disabled={isIndia ? !selectedState : !selectedCountry}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={selectedCountry ? "Select city" : "Select country first"} />
+                  <SelectValue placeholder={
+                    isIndia
+                      ? (selectedState ? "Select city" : "Select state first")
+                      : (selectedCountry ? "Select city" : "Select country first")
+                  } />
                 </SelectTrigger>
                 <SelectContent>
                   {availableCities.map((city) => (
@@ -475,7 +710,10 @@ export default function GoogleMapsScraper() {
 
             <div className="space-y-2">
               <Label htmlFor="business-category">Business Category *</Label>
-              <Select value={businessCategory} onValueChange={setBusinessCategory}>
+              <Select value={businessCategory} onValueChange={(val) => {
+                setBusinessCategory(val)
+                if (val !== "custom") setCustomCategory("")
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select business category" />
                 </SelectTrigger>
@@ -485,12 +723,21 @@ export default function GoogleMapsScraper() {
                       {category.charAt(0).toUpperCase() + category.slice(1)}
                     </SelectItem>
                   ))}
+                  <SelectItem value="custom">✏️ Custom (type your own)</SelectItem>
                 </SelectContent>
               </Select>
+              {businessCategory === "custom" && (
+                <Input
+                  placeholder="e.g. printing press, tent house, astrologer..."
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  className="mt-2"
+                />
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="max-results">Max Results</Label>
               <Select value={maxResults} onValueChange={setMaxResults}>
@@ -504,6 +751,23 @@ export default function GoogleMapsScraper() {
                   <SelectItem value="200">200 results</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="website-filter">Website Filter</Label>
+              <Select value={websiteFilter} onValueChange={setWebsiteFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">🌐 Any (with or without)</SelectItem>
+                  <SelectItem value="with">✅ With website only</SelectItem>
+                  <SelectItem value="without">❌ Without website only</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Filter results by website presence
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -525,7 +789,7 @@ export default function GoogleMapsScraper() {
 
           <Button 
             onClick={handleScrape} 
-            disabled={isLoading || !selectedCountry || !selectedCity || !businessCategory}
+            disabled={isLoading || !selectedCountry || (isIndia && !selectedState) || !selectedCity || !effectiveCategory}
             className="w-full md:w-auto"
           >
             {isLoading ? (
@@ -557,10 +821,10 @@ export default function GoogleMapsScraper() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Building className="h-5 w-5" />
-              Found {leads.length} Business{leads.length !== 1 ? 'es' : ''}
-              {validateWhatsApp && leads.some(lead => lead.hasWhatsApp) && (
+              Found {filteredLeads.length}{filteredLeads.length !== leads.length ? ` of ${leads.length}` : ""} Business{filteredLeads.length !== 1 ? 'es' : ''}
+              {validateWhatsApp && filteredLeads.some(lead => lead.hasWhatsApp) && (
                 <span className="text-sm font-normal text-green-600">
-                  ({leads.filter(lead => lead.hasWhatsApp).length} with WhatsApp)
+                  ({filteredLeads.filter(lead => lead.hasWhatsApp).length} with WhatsApp)
                 </span>
               )}
               {isValidatingWhatsApp && (
@@ -590,7 +854,7 @@ export default function GoogleMapsScraper() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {leads.map((lead, index) => (
+                  {filteredLeads.map((lead, index) => (
                     <TableRow key={index}>
                       <TableCell className="font-medium">
                         {lead.title || "N/A"}

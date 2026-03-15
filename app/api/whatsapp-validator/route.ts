@@ -74,9 +74,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Make request to Apify WhatsApp validator API
-    const token = process.env.APIFY_TOKEN_WHATSAPP
+    const token = process.env.APIFY_API_TOKEN
     if (!token) {
-      return NextResponse.json({ error: 'APIFY_TOKEN_WHATSAPP is not configured' }, { status: 500 })
+      return NextResponse.json({ error: 'APIFY_API_TOKEN is not configured' }, { status: 500 })
     }
     const apifyUrl = `https://api.apify.com/v2/acts/thinkerpro~whatsapp-number-validator/run-sync-get-dataset-items?token=${token}`
     

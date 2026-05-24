@@ -1,5 +1,13 @@
+import type { Metadata } from 'next'
 import Link from "next/link"
 import { Search } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: 'Terms of Service',
+  description: 'Read the LeadMapper Terms of Service. Understand your rights and responsibilities when using our lead generation platform.',
+  alternates: { canonical: 'https://leadmapper.pro/terms' },
+  robots: { index: true, follow: true },
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

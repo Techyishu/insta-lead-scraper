@@ -1,5 +1,13 @@
+import type { Metadata } from 'next'
 import Link from "next/link"
 import { Search, Mail } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description: 'Learn how LeadMapper collects, uses, and protects your data. We take privacy seriously and are fully GDPR compliant.',
+  alternates: { canonical: 'https://leadmapper.pro/privacy' },
+  robots: { index: true, follow: true },
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

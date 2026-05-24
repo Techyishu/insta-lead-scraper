@@ -34,12 +34,13 @@ export default function SignupPage() {
     setLoading(true)
 
     const supabase = createClient()
+    const siteUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: name, plan: selectedPlan },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${siteUrl}/auth/callback`,
       },
     })
 

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import {
   Zap, Check, AlertTriangle, Loader2,
@@ -48,6 +48,14 @@ const PLANS = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function BillingPage() {
+  return (
+    <Suspense fallback={<div className="max-w-4xl mx-auto py-12 text-center text-sm text-neutral-400">Loading billing…</div>}>
+      <BillingPageInner />
+    </Suspense>
+  )
+}
+
+function BillingPageInner() {
   const searchParams  = useSearchParams()
   const router        = useRouter()
   const paymentStatus = searchParams.get("payment")   // "success"

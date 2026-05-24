@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter, Bricolage_Grotesque } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
 import CookieBanner from '@/components/cookie-banner'
 import './globals.css'
 
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${bricolage.variable}`}>
       <body className="antialiased">
         {children}
+        <Analytics />
         <CookieBanner />
       </body>
     </html>

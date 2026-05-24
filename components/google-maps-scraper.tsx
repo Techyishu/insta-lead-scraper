@@ -1,961 +1,730 @@
 "use client"
 
-import React, { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Search, Download, MapPin, Phone, Building, MessageCircle, CheckCircle, XCircle, Clock } from "lucide-react"
+import React, { useState, useEffect } from "react"
+import Link from "next/link"
+import {
+  MagnifyingGlass,
+  DownloadSimple,
+  MapPin,
+  Phone,
+  Globe,
+  Buildings,
+  Star,
+  Export,
+} from "@phosphor-icons/react/dist/ssr"
+import {
+  Loader2,
+  Zap,
+  ArrowRight,
+  Search,
+  AlertCircle,
+  Download,
+} from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
-// Types
-interface GoogleMapsLead {
+interface SocialMedia {
+  facebook?: string | null
+  instagram?: string | null
+  linkedin?: string | null
+  twitter?: string | null
+  youtube?: string | null
+  tiktok?: string | null
+}
+
+interface Lead {
   title: string
   address: string
-  phone?: string
-  website?: string
-  rating?: number
-  reviewsCount?: number
-  category?: string
-  hasWhatsApp?: boolean
-  whatsAppStatus?: 'checking' | 'active' | 'inactive' | 'error'
+  phone?: string | null
+  website?: string | null
+  rating?: number | null
+  reviewsCount?: number | null
+  category?: string | null
+  mapsUrl?: string | null
+  emails?: string[] | null
+  socialMedia?: SocialMedia | null
 }
 
-// Business categories for Google Maps scraping
-const BUSINESS_CATEGORIES = [
-  "restaurant",
-  "cafe",
-  "hotel",
-  "gym",
-  "spa",
-  "salon",
-  "dentist",
-  "doctor",
-  "lawyer",
-  "accountant",
-  "real estate agent",
-  "insurance agent",
-  "auto repair",
-  "plumber",
-  "electrician",
-  "contractor",
-  "bakery",
-  "pharmacy",
-  "veterinarian",
-  "chiropractor",
-  "massage therapist",
-  "nail salon",
-  "barber shop",
-  "clothing store",
-  "jewelry store",
-  "florist",
-  "pet store",
-  "bookstore",
-  "electronics store",
-  "furniture store",
-  "home improvement",
-  "landscaping",
-  "cleaning service",
-  "catering",
-  "photography",
-  "wedding planner",
-  "travel agency",
-  "car dealership",
-  "bank",
-  "credit union",
-  "tax service",
-  "consulting",
-  "marketing agency",
-  "web design",
-  "IT services",
-  "tutoring",
-  "daycare",
-  "senior care",
-  "fitness trainer",
-  "yoga studio",
-  "dance studio",
-  "music lessons",
-  "art gallery",
-  "museum",
-  "library",
-  "church",
-  "nonprofit"
+interface Credits {
+  used: number
+  limit: number
+  remaining: number
+}
+
+
+function SkeletonRow() {
+  return (
+    <tr className="border-b border-neutral-100">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <td key={i} className="px-4 py-3">
+          <div
+            className="h-3.5 bg-neutral-100 rounded animate-pulse"
+            style={{ width: `${50 + (i % 3) * 20}%` }}
+          />
+        </td>
+      ))}
+    </tr>
+  )
+}
+
+// ── Country list ──────────────────────────────────────────────────────────────
+const COUNTRIES = [
+  "Afghanistan","Albania","Algeria","Andorra","Angola","Argentina","Armenia","Australia",
+  "Austria","Azerbaijan","Bahrain","Bangladesh","Belarus","Belgium","Belize","Benin",
+  "Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Brunei","Bulgaria","Burkina Faso",
+  "Cambodia","Cameroon","Canada","Chile","China","Colombia","Costa Rica","Croatia","Cuba",
+  "Cyprus","Czech Republic","Denmark","Dominican Republic","Ecuador","Egypt","El Salvador",
+  "Estonia","Ethiopia","Finland","France","Georgia","Germany","Ghana","Greece","Guatemala",
+  "Honduras","Hong Kong","Hungary","India","Indonesia","Iran","Iraq","Ireland","Israel",
+  "Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kuwait","Kyrgyzstan","Latvia",
+  "Lebanon","Libya","Lithuania","Luxembourg","Malaysia","Maldives","Mali","Malta","Mexico",
+  "Moldova","Mongolia","Montenegro","Morocco","Mozambique","Myanmar","Namibia","Nepal",
+  "Netherlands","New Zealand","Nicaragua","Nigeria","Norway","Oman","Pakistan","Palestine",
+  "Panama","Paraguay","Peru","Philippines","Poland","Portugal","Qatar","Romania","Russia",
+  "Rwanda","Saudi Arabia","Senegal","Serbia","Singapore","Slovakia","Slovenia","Somalia",
+  "South Africa","South Korea","Spain","Sri Lanka","Sudan","Sweden","Switzerland","Syria",
+  "Taiwan","Tajikistan","Tanzania","Thailand","Tunisia","Turkey","Turkmenistan","Uganda",
+  "Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Uzbekistan",
+  "Venezuela","Vietnam","Yemen","Zambia","Zimbabwe",
 ]
 
-// India: States with all major cities
-const INDIA_STATES_CITIES: Record<string, string[]> = {
-  "Andhra Pradesh": [
-    "Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool",
-    "Tirupati", "Rajahmundry", "Kadapa", "Kakinada", "Anantapur",
-    "Eluru", "Ongole", "Nandyal", "Bhimavaram", "Machilipatnam",
-    "Vizianagaram", "Chittoor", "Proddatur", "Srikakulam", "Hindupur"
-  ],
-  "Arunachal Pradesh": [
-    "Itanagar", "Naharlagun", "Pasighat", "Tezpur", "Bomdila",
-    "Ziro", "Along", "Changlang", "Tezu", "Seppa"
-  ],
-  "Assam": [
-    "Guwahati", "Silchar", "Dibrugarh", "Jorhat", "Nagaon",
-    "Tinsukia", "Tezpur", "Bongaigaon", "Dhubri", "Diphu",
-    "Sivasagar", "Goalpara", "Karimganj", "Golaghat", "Hailakandi",
-    "North Lakhimpur", "Haflong", "Mangaldoi", "Nalbari", "Barpeta"
-  ],
-  "Bihar": [
-    "Patna", "Gaya", "Bhagalpur", "Muzaffarpur", "Darbhanga",
-    "Purnia", "Arrah", "Begusarai", "Katihar", "Munger",
-    "Chapra", "Bihar Sharif", "Saharsa", "Hajipur", "Sitamarhi",
-    "Motihari", "Bettiah", "Supaul", "Siwan", "Nawada",
-    "Aurangabad", "Kishanganj", "Jehanabad", "Buxar", "Samastipur"
-  ],
-  "Chhattisgarh": [
-    "Raipur", "Bhilai", "Bilaspur", "Korba", "Durg",
-    "Rajnandgaon", "Jagdalpur", "Raigarh", "Ambikapur", "Dhamtari",
-    "Chirmiri", "Bhatapara", "Mahasamund", "Kondagaon", "Kanker"
-  ],
-  "Goa": [
-    "Panaji", "Margao", "Vasco da Gama", "Mapusa", "Ponda",
-    "Bicholim", "Curchorem", "Sanquelim", "Cuncolim", "Quepem"
-  ],
-  "Gujarat": [
-    "Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar",
-    "Jamnagar", "Gandhinagar", "Junagadh", "Anand", "Navsari",
-    "Morbi", "Mehsana", "Bharuch", "Valsad", "Surendranagar",
-    "Porbandar", "Amreli", "Godhra", "Nadiad", "Gandhidham",
-    "Botad", "Veraval", "Gondal", "Jetpur", "Palanpur",
-    "Dahod", "Patan", "Kalol", "Kadi", "Dwarka"
-  ],
-  "Haryana": [
-    "Faridabad", "Gurgaon", "Panipat", "Ambala", "Yamunanagar",
-    "Rohtak", "Hisar", "Karnal", "Sonipat", "Panchkula",
-    "Bhiwani", "Bahadurgarh", "Jind", "Thanesar", "Kaithal",
-    "Rewari", "Palwal", "Sirsa", "Fatehabad", "Narnaul",
-    "Hansi", "Mahendragarh", "Nuh", "Hodal", "Pataudi",
-    "Ballabhgarh", "Manesar", "Dharuhera", "Jhajjar", "Charkhi Dadri"
-  ],
-  "Himachal Pradesh": [
-    "Shimla", "Dharamsala", "Solan", "Mandi", "Palampur",
-    "Baddi", "Nahan", "Kullu", "Chamba", "Una",
-    "Bilaspur", "Hamirpur", "Sundernagar", "Kangra", "Nurpur",
-    "Rampur", "Rohru", "Manali", "Kasauli", "Parwanoo"
-  ],
-  "Jharkhand": [
-    "Ranchi", "Jamshedpur", "Dhanbad", "Bokaro", "Hazaribagh",
-    "Deoghar", "Giridih", "Ramgarh", "Phusro", "Chirkunda",
-    "Medininagar", "Chaibasa", "Dumka", "Pakur", "Gumla",
-    "Simdega", "Lohardaga", "Jamtara", "Sahibganj", "Koderma"
-  ],
-  "Karnataka": [
-    "Bangalore", "Mysuru", "Hubli", "Mangalore", "Belgaum",
-    "Davangere", "Bellary", "Shimoga", "Tumkur", "Gulbarga",
-    "Bidar", "Hassan", "Udupi", "Raichur", "Bijapur",
-    "Hospet", "Gadag", "Chitradurga", "Kolar", "Bagalkot",
-    "Mandya", "Chikmagalur", "Dharwad", "Robertsonpet", "Gangavati",
-    "Ranibennur", "Yadgir", "Chamarajanagar", "Haveri", "Karwar"
-  ],
-  "Kerala": [
-    "Thiruvananthapuram", "Kochi", "Kozhikode", "Thrissur", "Kollam",
-    "Palakkad", "Alappuzha", "Malappuram", "Kannur", "Kasaragod",
-    "Kottayam", "Pathanamthitta", "Idukki", "Wayanad", "Ernakulam",
-    "Thalassery", "Kalpetta", "Manjeri", "Tirur", "Ponnani",
-    "Chalakudy", "Irinjalakuda", "Perinthalmanna", "Vatakara", "Kayamkulam"
-  ],
-  "Madhya Pradesh": [
-    "Indore", "Bhopal", "Jabalpur", "Gwalior", "Ujjain",
-    "Sagar", "Dewas", "Satna", "Ratlam", "Rewa",
-    "Murwara", "Singrauli", "Burhanpur", "Khandwa", "Bhind",
-    "Chhindwara", "Guna", "Shivpuri", "Vidisha", "Chhatarpur",
-    "Damoh", "Mandsaur", "Khargone", "Neemuch", "Pithampur",
-    "Hoshangabad", "Itarsi", "Sehore", "Betul", "Seoni"
-  ],
-  "Maharashtra": [
-    "Mumbai", "Pune", "Nagpur", "Thane", "Nashik",
-    "Pimpri-Chinchwad", "Kalyan-Dombivli", "Vasai-Virar", "Aurangabad", "Navi Mumbai",
-    "Solapur", "Mira-Bhayandar", "Bhiwandi", "Amravati", "Nanded",
-    "Kolhapur", "Sangli", "Jalgaon", "Akola", "Latur",
-    "Dhule", "Ahmednagar", "Ichalkaranji", "Chandrapur", "Parbhani",
-    "Jalna", "Osmanabad", "Bid", "Yavatmal", "Ratnagiri",
-    "Wardha", "Gondia", "Bhandara", "Buldhana", "Washim"
-  ],
-  "Manipur": [
-    "Imphal", "Thoubal", "Bishnupur", "Churachandpur", "Senapati",
-    "Ukhrul", "Chandel", "Tamenglong", "Jiribam", "Kakching"
-  ],
-  "Meghalaya": [
-    "Shillong", "Tura", "Nongstoin", "Jowai", "Baghmara",
-    "Resubelpara", "Williamnagar", "Nongpoh", "Mairang", "Cherrapunji"
-  ],
-  "Mizoram": [
-    "Aizawl", "Lunglei", "Saiha", "Champhai", "Kolasib",
-    "Serchhip", "Lawngtlai", "Mamit", "Khawzawl", "Hnahthial"
-  ],
-  "Nagaland": [
-    "Kohima", "Dimapur", "Mokokchung", "Tuensang", "Wokha",
-    "Zunheboto", "Mon", "Phek", "Kiphire", "Longleng"
-  ],
-  "Odisha": [
-    "Bhubaneswar", "Cuttack", "Rourkela", "Brahmapur", "Sambalpur",
-    "Puri", "Balasore", "Bhadrak", "Baripada", "Jharsuguda",
-    "Jeypore", "Bargarh", "Kendujhar", "Angul", "Dhenkanal",
-    "Sundargarh", "Bolangir", "Koraput", "Rayagada", "Parlakhemundi",
-    "Phulbani", "Nabarangpur", "Malkangiri", "Nuapada", "Kalahandi"
-  ],
-  "Punjab": [
-    "Ludhiana", "Amritsar", "Jalandhar", "Patiala", "Bathinda",
-    "Pathankot", "Hoshiarpur", "Batala", "Moga", "Abohar",
-    "Malerkotla", "Khanna", "Phagwara", "Muktsar", "Barnala",
-    "Rajpura", "Firozpur", "Kapurthala", "Sangrur", "Fatehgarh Sahib",
-    "Gurdaspur", "Rupnagar", "Nawanshahr", "Tarn Taran", "Faridkot",
-    "Fazilka", "Mohali", "Zirakpur", "Derabassi", "Morinda"
-  ],
-  "Rajasthan": [
-    "Jaipur", "Jodhpur", "Kota", "Bikaner", "Ajmer",
-    "Udaipur", "Bhilwara", "Alwar", "Sikar", "Sri Ganganagar",
-    "Pali", "Bharatpur", "Barmer", "Nagaur", "Churu",
-    "Jhunjhunu", "Kishangarh", "Beawar", "Hanumangarh", "Tonk",
-    "Sawai Madhopur", "Bundi", "Chittorgarh", "Jhalawar", "Baran",
-    "Dholpur", "Karauli", "Dausa", "Rajsamand", "Dungarpur",
-    "Banswara", "Pratapgarh", "Jaisalmer", "Sirohi", "Jalore"
-  ],
-  "Sikkim": [
-    "Gangtok", "Namchi", "Mangan", "Gyalshing", "Rangpo",
-    "Jorethang", "Singtam", "Ravangla", "Yuksom", "Lachung"
-  ],
-  "Tamil Nadu": [
-    "Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem",
-    "Tirunelveli", "Tiruppur", "Erode", "Vellore", "Thoothukudi",
-    "Dindigul", "Thanjavur", "Ranipet", "Sivakasi", "Karur",
-    "Hosur", "Nagercoil", "Kancheepuram", "Kumarapalayam", "Pudukkottai",
-    "Cuddalore", "Kumbakonam", "Nagapattinam", "Villupuram", "Tiruvannamalai",
-    "Dharmapuri", "Krishnagiri", "Namakkal", "Ariyalur", "Perambalur",
-    "Ramanathapuram", "Virudhunagar", "Theni", "Nilgiris", "Tirupattur"
-  ],
-  "Telangana": [
-    "Hyderabad", "Warangal", "Nizamabad", "Karimnagar", "Khammam",
-    "Ramagundam", "Mahbubnagar", "Nalgonda", "Adilabad", "Suryapet",
-    "Miryalaguda", "Siddipet", "Mancherial", "Jagtial", "Nirmal",
-    "Kothagudem", "Bhongir", "Sangareddy", "Vikarabad", "Narayanpet",
-    "Medak", "Narasaraopet", "Kamareddy", "Jangaon", "Yadadri"
-  ],
-  "Tripura": [
-    "Agartala", "Udaipur", "Dharmanagar", "Kailashahar", "Belonia",
-    "Ambassa", "Khowai", "Teliamura", "Melaghar", "Sonamura"
-  ],
-  "Uttar Pradesh": [
-    "Lucknow", "Kanpur", "Ghaziabad", "Agra", "Meerut",
-    "Varanasi", "Allahabad", "Bareilly", "Aligarh", "Moradabad",
-    "Saharanpur", "Gorakhpur", "Noida", "Mathura", "Rampur",
-    "Shahjahanpur", "Muzaffarnagar", "Firozabad", "Jhansi", "Hapur",
-    "Etawah", "Mirzapur", "Bulandshahr", "Sambhal", "Amroha",
-    "Hardoi", "Fatehpur", "Raebareli", "Orai", "Sitapur",
-    "Lakhimpur", "Unnao", "Jaunpur", "Azamgarh", "Sultanpur",
-    "Faizabad", "Ballia", "Deoria", "Gonda", "Bahraich",
-    "Shravasti", "Basti", "Maharajganj", "Siddharthnagar", "Kushinagar"
-  ],
-  "Uttarakhand": [
-    "Dehradun", "Haridwar", "Roorkee", "Haldwani", "Rudrapur",
-    "Kashipur", "Rishikesh", "Kotdwar", "Ramnagar", "Pithoragarh",
-    "Almora", "Nainital", "Mussoorie", "Pauri", "Tehri",
-    "Uttarkashi", "Chamoli", "Champawat", "Bageshwar", "Udham Singh Nagar"
-  ],
-  "West Bengal": [
-    "Kolkata", "Howrah", "Durgapur", "Asansol", "Siliguri",
-    "Maheshtala", "Rajpur Sonarpur", "South Dumdum", "Bardhaman", "Malda",
-    "Barasat", "Krishnanagar", "North Dumdum", "Medinipur", "Berhampore",
-    "Habra", "Kharagpur", "Shantipur", "Darjeeling", "Jalpaiguri",
-    "Cooch Behar", "Balurghat", "Raiganj", "Haldia", "Bankura",
-    "Purulia", "Bishnupur", "Bolpur", "Tamluk", "Alipurduar"
-  ],
-  "Delhi": [
-    "New Delhi", "North Delhi", "South Delhi", "East Delhi", "West Delhi",
-    "Central Delhi", "Dwarka", "Rohini", "Janakpuri", "Laxmi Nagar",
-    "Pitampura", "Saket", "Vasant Kunj", "Karol Bagh", "Nehru Place",
-    "Connaught Place", "Shahdara", "Preet Vihar", "Mayur Vihar", "Noida Extension"
-  ],
-  "Jammu & Kashmir": [
-    "Srinagar", "Jammu", "Anantnag", "Sopore", "Baramulla",
-    "Udhampur", "Kathua", "Pulwama", "Pampore", "Rajouri",
-    "Poonch", "Reasi", "Doda", "Kishtwar", "Ramban"
-  ],
-  "Ladakh": [
-    "Leh", "Kargil", "Nubra", "Zanskar", "Drass"
-  ],
-  "Chandigarh": [
-    "Chandigarh", "Sector 17", "Sector 22", "Panchkula", "Mohali"
-  ],
-  "Puducherry": [
-    "Puducherry", "Karaikal", "Mahe", "Yanam", "Oulgaret"
-  ],
-  "Andaman & Nicobar": [
-    "Port Blair", "Rangat", "Diglipur", "Car Nicobar", "Mayabunder"
-  ],
-  "Dadra & Nagar Haveli": [
-    "Silvassa", "Amli", "Khanvel", "Naroli", "Rakholi"
-  ],
-  "Daman & Diu": [
-    "Daman", "Diu", "Nani Daman", "Moti Daman", "Vanakbara"
-  ],
-  "Lakshadweep": [
-    "Kavaratti", "Agatti", "Amini", "Andrott", "Minicoy"
-  ]
-}
-
-// Countries & States/Cities with High Potential for Business Scraping
-const COUNTRIES_CITIES = {
-  "United States": [
-    "Alabama",
-    "Alaska",
-    "Arizona",
-    "Arkansas",
-    "California",
-    "Colorado",
-    "Connecticut",
-    "Delaware",
-    "Florida",
-    "Georgia",
-    "Hawaii",
-    "Idaho",
-    "Illinois",
-    "Indiana",
-    "Iowa",
-    "Kansas",
-    "Kentucky",
-    "Louisiana",
-    "Maine",
-    "Maryland",
-    "Massachusetts",
-    "Michigan",
-    "Minnesota",
-    "Mississippi",
-    "Missouri",
-    "Montana",
-    "Nebraska",
-    "Nevada",
-    "New Hampshire",
-    "New Jersey",
-    "New Mexico",
-    "New York",
-    "North Carolina",
-    "North Dakota",
-    "Ohio",
-    "Oklahoma",
-    "Oregon",
-    "Pennsylvania",
-    "Rhode Island",
-    "South Carolina",
-    "South Dakota",
-    "Tennessee",
-    "Texas",
-    "Utah",
-    "Vermont",
-    "Virginia",
-    "Washington",
-    "West Virginia",
-    "Wisconsin",
-    "Wyoming"
-  ],
-  "United Kingdom": [
-    "London",
-    "Birmingham",
-    "Manchester",
-    "Glasgow",
-    "Liverpool",
-    "Leeds",
-    "Sheffield",
-    "Edinburgh",
-    "Bristol",
-    "Cardiff",
-    "Leicester",
-    "Coventry",
-    "Bradford",
-    "Belfast",
-    "Nottingham",
-    "Kingston upon Hull",
-    "Newcastle upon Tyne",
-    "Stoke-on-Trent",
-    "Southampton",
-    "Derby",
-    "Portsmouth",
-    "Brighton",
-    "Plymouth",
-    "Northampton",
-    "Reading",
-    "Luton",
-    "Wolverhampton",
-    "Bolton",
-    "Bournemouth",
-    "Norwich",
-    "Swindon",
-    "Swansea",
-    "Southend-on-Sea",
-    "Middlesbrough",
-    "Milton Keynes",
-    "Peterborough",
-    "Warrington",
-    "Huddersfield",
-    "York",
-    "Poole",
-    "Stockport",
-    "Preston",
-    "Dundee",
-    "Aberdeen",
-    "Blackpool",
-    "Oxford",
-    "Cambridge",
-    "Ipswich",
-    "Slough",
-    "Exeter"
-  ],
-  "Australia": [
-    "Sydney, New South Wales",
-    "Melbourne, Victoria",
-    "Brisbane, Queensland",
-    "Perth, Western Australia",
-    "Adelaide, South Australia",
-    "Gold Coast, Queensland",
-    "Newcastle, New South Wales",
-    "Canberra, Australian Capital Territory",
-    "Sunshine Coast, Queensland",
-    "Wollongong, New South Wales",
-    "Hobart, Tasmania",
-    "Geelong, Victoria",
-    "Townsville, Queensland",
-    "Cairns, Queensland",
-    "Darwin, Northern Territory",
-    "Toowoomba, Queensland",
-    "Ballarat, Victoria",
-    "Bendigo, Victoria",
-    "Albury, New South Wales",
-    "Launceston, Tasmania",
-    "Mackay, Queensland",
-    "Rockhampton, Queensland",
-    "Bunbury, Western Australia",
-    "Bundaberg, Queensland",
-    "Coffs Harbour, New South Wales",
-    "Wagga Wagga, New South Wales",
-    "Hervey Bay, Queensland",
-    "Mildura, Victoria",
-    "Shepparton, Victoria",
-    "Port Macquarie, New South Wales"
-  ],
-  "India": []
-}
-
 export default function GoogleMapsScraper() {
-  const [selectedCountry, setSelectedCountry] = useState("")
-  const [selectedState, setSelectedState] = useState("")
-  const [selectedCity, setSelectedCity] = useState("")
-  const [businessCategory, setBusinessCategory] = useState("")
-  const [customCategory, setCustomCategory] = useState("")
+  const [country, setCountry]     = useState("United States")
+  const [cityState, setCityState] = useState("")
+  const [keyword, setKeyword]     = useState("")
   const [maxResults, setMaxResults] = useState("50")
+  const [phoneFilter, setPhoneFilter] = useState("any")
   const [websiteFilter, setWebsiteFilter] = useState("any")
-  const [validateWhatsApp, setValidateWhatsApp] = useState(true)
-  const [leads, setLeads] = useState<GoogleMapsLead[]>([])
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
+  const [leads, setLeads] = useState<Lead[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [isValidatingWhatsApp, setIsValidatingWhatsApp] = useState(false)
   const [error, setError] = useState("")
+  const [noCredits, setNoCredits] = useState(false)
+  const [searchId, setSearchId] = useState<string | null>(null)
+  const [credits, setCredits] = useState<Credits>({ used: 0, limit: 50, remaining: 50 })
+  const [creditsLoading, setCreditsLoading] = useState(true)
+  const [plan, setPlan] = useState<string>("free")
 
-  const isIndia = selectedCountry === "India"
-  const availableStates = isIndia ? Object.keys(INDIA_STATES_CITIES) : []
-  const availableCities = isIndia
-    ? (selectedState ? INDIA_STATES_CITIES[selectedState] || [] : [])
-    : (selectedCountry ? COUNTRIES_CITIES[selectedCountry as keyof typeof COUNTRIES_CITIES] || [] : [])
+  // Plan-based limits (mirrors server constants — UI only; server always re-enforces)
+  const PLAN_MAX: Record<string, number> = { free: 50, starter: 1000, growth: 2000 }
+  const FILTER_PLANS = ["starter", "growth"]
+  const planMax    = PLAN_MAX[plan] ?? 50
+  const canFilter  = FILTER_PLANS.includes(plan)
 
-  const effectiveCategory = businessCategory === "custom" ? customCategory.trim() : businessCategory
+  // Max-results options visible to this plan
+  const ALL_OPTIONS = [10, 25, 50, 100, 200, 500, 1000, 2000]
+  const resultOptions = ALL_OPTIONS.filter((n) => n <= planMax)
 
-  const handleScrape = async () => {
-    if (!selectedCountry || (isIndia && !selectedState) || !selectedCity || !effectiveCategory) {
-      setError(isIndia ? "Please select country, state, city, and business category" : "Please select country, city, and business category")
+  // Load credits + plan on mount
+  useEffect(() => {
+    async function loadProfile() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("credits_used, credits_limit, plan")
+        .eq("id", user.id)
+        .single()
+      if (profile) {
+        const used  = profile.credits_used  ?? 0
+        const limit = profile.credits_limit ?? 50
+        const p     = profile.plan ?? "free"
+        setCredits({ used, limit, remaining: limit - used })
+        setPlan(p)
+        // Clamp existing maxResults to the plan limit
+        const pMax = PLAN_MAX[p] ?? 50
+        setMaxResults((prev) => String(Math.min(parseInt(prev, 10) || 50, pMax)))
+      }
+      setCreditsLoading(false)
+    }
+    loadProfile()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleSearch = async () => {
+    if (!keyword.trim() || !country) {
+      setError("Please enter a keyword and select a country.")
       return
     }
-
+    if (credits.remaining <= 0) {
+      setNoCredits(true)
+      return
+    }
     setIsLoading(true)
     setError("")
+    setNoCredits(false)
     setLeads([])
+    setSelectedRows(new Set())
+    setSearchId(null)
 
     try {
-      const locationQuery = selectedCountry === "United States"
-        ? selectedCity
-        : isIndia
-          ? `${selectedCity}, ${selectedState}, India`
-          : `${selectedCity}, ${selectedCountry}`
-      
+      const location = cityState.trim()
+        ? `${cityState.trim()}, ${country}`
+        : country
+
       const response = await fetch("/api/google-maps-scraper", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          locationQuery: locationQuery,
-          searchStringsArray: [effectiveCategory],
-          maxCrawledPlacesPerSearch: parseInt(maxResults),
-          websiteFilter: websiteFilter,
+          location,
+          keyword: keyword.trim(),
+          maxResults: parseInt(maxResults),
+          phoneFilter,
+          websiteFilter,
         }),
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
       const data = await response.json()
-      
-      if (data.error) {
-        throw new Error(data.error)
+
+      if (response.status === 402 || data.noCredits) {
+        setNoCredits(true)
+        setCredits({ used: data.creditsUsed ?? credits.used, limit: data.creditsLimit ?? credits.limit, remaining: 0 })
+        return
+      }
+      if (response.status === 401 || data.unauthorized) {
+        setError("Your session expired. Please sign in again.")
+        return
+      }
+      if (!response.ok || data.error) {
+        throw new Error(data.error || `HTTP error: ${response.status}`)
       }
 
-      const initialLeads = data.leads || []
-      setLeads(initialLeads)
+      setLeads(data.leads || [])
+      setSearchId(data.searchId ?? null)
 
-      // Validate WhatsApp numbers if enabled and there are phone numbers
-      if (validateWhatsApp && initialLeads.length > 0) {
-        await validateWhatsAppNumbers(initialLeads)
+      if (data.creditsUsed !== undefined) {
+        setCredits({
+          used: data.creditsUsed,
+          limit: data.creditsLimit,
+          remaining: data.creditsRemaining,
+        })
       }
     } catch (err) {
-      console.error("Error scraping Google Maps:", err)
-      setError(err instanceof Error ? err.message : "An error occurred while scraping")
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const validateWhatsAppNumbers = async (leadsToValidate: GoogleMapsLead[]) => {
-    const phoneNumbers = leadsToValidate
-      .filter(lead => lead.phone)
-      .map(lead => lead.phone!)
-    
-    if (phoneNumbers.length === 0) return
+  const buildCSV = (rows: Lead[]) => {
+    const headers = ["Business Name", "Address", "Phone", "Website", "Rating", "Reviews", "Category", "Google Maps"]
 
-    setIsValidatingWhatsApp(true)
-    
-    // Update leads to show checking status
-    setLeads(prevLeads => 
-      prevLeads.map(lead => 
-        lead.phone ? { ...lead, whatsAppStatus: 'checking' as const } : lead
-      )
-    )
+    const csvRows = rows.map((l) => [
+      `"${(l.title || '').replace(/"/g, '""')}"`,
+      `"${(l.address || '').replace(/"/g, '""')}"`,
+      `"${l.phone || ''}"`,
+      `"${l.website || ''}"`,
+      l.rating ?? "",
+      l.reviewsCount ?? "",
+      `"${(l.category || '').replace(/"/g, '""')}"`,
+      `"${l.mapsUrl || ''}"`,
+    ].join(","))
 
-    try {
-      const response = await fetch('/api/whatsapp-validator', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          phoneNumbers,
-          selectedCountry 
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`WhatsApp validation failed: ${response.status}`)
-      }
-
-      const validationData = await response.json()
-      
-      if (validationData.success && validationData.results) {
-        // Update leads with WhatsApp validation results
-        setLeads(prevLeads => 
-          prevLeads.map(lead => {
-            if (!lead.phone) return lead
-            
-            // Normalize phone numbers for comparison
-            const normalizePhone = (phone: string) => phone.replace(/[^\d]/g, '')
-            const leadPhoneNormalized = normalizePhone(lead.phone)
-            
-            const validation = validationData.results.find(
-              (result: any) => {
-                const resultPhoneNormalized = normalizePhone(result.phoneNumber || '')
-                return resultPhoneNormalized === leadPhoneNormalized
-              }
-            )
-            
-            console.log(`Matching phone ${lead.phone} (${leadPhoneNormalized}) with validation result:`, validation)
-            
-            return {
-              ...lead,
-              hasWhatsApp: validation?.hasWhatsApp || false,
-              whatsAppStatus: validation?.hasWhatsApp ? 'active' as const : 'inactive' as const
-            }
-          })
-        )
-      }
-    } catch (error) {
-      console.error('WhatsApp validation error:', error)
-      // Update leads to show error status
-      setLeads(prevLeads => 
-        prevLeads.map(lead => 
-          lead.phone ? { ...lead, whatsAppStatus: 'error' as const } : lead
-        )
-      )
-    } finally {
-      setIsValidatingWhatsApp(false)
-    }
+    return [headers.join(","), ...csvRows].join("\n")
   }
 
-  const exportToCSV = () => {
-    if (leads.length === 0) return
-
-    const headers = ["Business Name", "Address", "Phone", "WhatsApp Active", "Website", "Rating", "Reviews Count", "Category"]
-    const csvContent = [
-      headers.join(","),
-      ...leads.map(lead => [
-        `"${lead.title || ""}"`,
-        `"${lead.address || ""}"`,
-        `"${lead.phone || ""}"`,
-        lead.rating || "",
-        lead.reviewsCount || "",
-        `"${lead.category || ""}"`,
-        lead.hasWhatsApp ? "Yes" : "No",
-        `"${lead.website || ""}"`,
-      ].join(","))
-    ].join("\n")
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+  const exportRows = async (rows: Lead[], suffix = "") => {
+    if (rows.length === 0) return
+    const locationSlug = (cityState.trim() ? `${cityState.trim()}, ${country}` : country)
+      .replace(/[^a-zA-Z0-9]/g, "-")
+    const filename = `leadmapper-${keyword.replace(/\s+/g, "-")}-${locationSlug}${suffix}.csv`
+    const blob = new Blob([buildCSV(rows)], { type: "text/csv;charset=utf-8;" })
     const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", `google-maps-leads-${businessCategory}-${selectedCity.replace(/[^a-zA-Z0-9]/g, "-")}.csv`)
-    link.style.visibility = "hidden"
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+
+    // Log export + send notification email (both non-blocking)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from("exports").insert({
+          user_id: user.id,
+          search_id: searchId ?? undefined,
+          filename,
+          lead_count: rows.length,
+        })
+      }
+    } catch {
+      // intentionally silent
+    }
+
+    // Send export-completed email (fire-and-forget)
+    fetch("/api/notifications/send-export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        keyword,
+        location: cityState.trim() ? `${cityState.trim()}, ${country}` : country,
+        count: rows.length,
+      }),
+    }).catch(() => {/* intentionally silent */})
   }
 
+  const toggleRow = (i: number) => {
+    const s = new Set(selectedRows)
+    s.has(i) ? s.delete(i) : s.add(i)
+    setSelectedRows(s)
+  }
+
+  const toggleAll = () => {
+    if (selectedRows.size === leads.length) {
+      setSelectedRows(new Set())
+    } else {
+      setSelectedRows(new Set(leads.map((_, i) => i)))
+    }
+  }
+
+  const selectedLeads = leads.filter((_, i) => selectedRows.has(i))
+  const canSearch = !isLoading && country && keyword.trim() && credits.remaining > 0
+
+  const creditPct = credits.limit > 0 ? Math.min((credits.used / credits.limit) * 100, 100) : 0
+  const lowCredits = credits.remaining <= Math.ceil(credits.limit * 0.15) && credits.remaining > 0
+  const outOfCredits = credits.remaining === 0
+
   return (
-    <div className="space-y-6">
-      {/* Search Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Google Maps Business Scraper
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className={`grid grid-cols-1 gap-4 ${isIndia ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
-            <div className="space-y-2">
-              <Label htmlFor="country">Country *</Label>
-              <Select value={selectedCountry} onValueChange={(value) => {
-                setSelectedCountry(value)
-                setSelectedState("")
-                setSelectedCity("")
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select country" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(COUNTRIES_CITIES).map((country) => (
-                    <SelectItem key={country} value={country}>
-                      {country}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+    <div className="space-y-4">
 
-            {isIndia && (
-              <div className="space-y-2">
-                <Label htmlFor="state">State *</Label>
-                <Select
-                  value={selectedState}
-                  onValueChange={(value) => {
-                    setSelectedState(value)
-                    setSelectedCity("")
-                  }}
-                  disabled={!selectedCountry}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableStates.map((state) => (
-                      <SelectItem key={state} value={state}>
-                        {state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      {/* ── Credits bar ────────────────────────────────────────────────────── */}
+      {!creditsLoading && (
+        <div className={`bg-white border rounded-xl px-4 py-3 flex items-center justify-between gap-4 ${
+          outOfCredits ? "border-red-200 bg-red-50"
+          : lowCredits  ? "border-amber-200 bg-amber-50"
+          : "border-neutral-200"
+        }`}>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <Zap
+              size={14}
+              strokeWidth={2}
+              className={outOfCredits ? "text-red-500" : lowCredits ? "text-amber-500" : "text-blue-600"}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs font-semibold ${
+                  outOfCredits ? "text-red-700" : lowCredits ? "text-amber-700" : "text-neutral-700"
+                }`}>
+                  {credits.remaining} credits remaining
+                </span>
+                <span className="text-[11px] text-neutral-400">
+                  ({credits.used} / {credits.limit} used)
+                </span>
               </div>
-            )}
+              <div className="h-1.5 bg-neutral-200 rounded-full overflow-hidden w-36">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    outOfCredits ? "bg-red-400" : lowCredits ? "bg-amber-400" : "bg-blue-600"
+                  }`}
+                  style={{ width: `${creditPct}%` }}
+                />
+              </div>
+            </div>
+          </div>
+          {(outOfCredits || lowCredits) && (
+            <Link
+              href="/dashboard/billing"
+              className="flex items-center gap-1 text-xs font-semibold bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
+            >
+              Upgrade <ArrowRight size={11} strokeWidth={2.5} />
+            </Link>
+          )}
+        </div>
+      )}
 
-            <div className="space-y-2">
-              <Label htmlFor="city">City *</Label>
-              <Select
-                value={selectedCity}
-                onValueChange={setSelectedCity}
-                disabled={isIndia ? !selectedState : !selectedCountry}
+      {/* ── No-credits gate ─────────────────────────────────────────────────── */}
+      {(noCredits || outOfCredits) && (
+        <div className="bg-white border border-red-200 rounded-xl p-10 text-center">
+          <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center mx-auto mb-4">
+            <Zap size={22} className="text-red-400" strokeWidth={2} />
+          </div>
+          <h3 className="text-base font-semibold text-neutral-900 mb-2">No credits remaining</h3>
+          <p className="text-sm text-neutral-400 mb-5 max-w-xs mx-auto leading-relaxed">
+            You've used all your credits. Upgrade your plan to continue finding leads.
+          </p>
+          <Link
+            href="/dashboard/billing"
+            className="inline-flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors"
+          >
+            View upgrade plans
+            <ArrowRight size={14} strokeWidth={2.5} />
+          </Link>
+        </div>
+      )}
+
+      {/* ── Search card ─────────────────────────────────────────────────────── */}
+      <div className={`bg-white border border-neutral-200 rounded-xl p-6 shadow-sm ${outOfCredits ? "opacity-50 pointer-events-none select-none" : ""}`}>
+        <div className="flex items-center gap-2.5 mb-6">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+            <Search size={16} className="text-blue-700" strokeWidth={2.5} />
+          </div>
+          <div>
+            <h2 className="text-[0.9375rem] font-semibold text-neutral-900">Local Business Finder</h2>
+            <p className="text-xs text-neutral-400">Search and export verified business leads</p>
+          </div>
+        </div>
+
+        {/* Inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+              Business keyword <span className="text-blue-600">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. dentists, Italian restaurants, gyms"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && canSearch && handleSearch()}
+              className="w-full bg-white border border-neutral-200 rounded-lg px-4 py-2.5 text-sm text-neutral-900 placeholder-neutral-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+            />
+            <p className="text-[11px] text-neutral-400">Try "Italian restaurants" not just "restaurants" for better results.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+              Location <span className="text-blue-600">*</span>
+            </label>
+            <div className="flex gap-2">
+              {/* Country dropdown */}
+              <select
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="w-44 flex-shrink-0 bg-white border border-neutral-200 rounded-lg px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
               >
-                <SelectTrigger>
-                  <SelectValue placeholder={
-                    isIndia
-                      ? (selectedState ? "Select city" : "Select state first")
-                      : (selectedCountry ? "Select city" : "Select country first")
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCities.map((city) => (
-                    <SelectItem key={city} value={city}>
-                      {city}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="business-category">Business Category *</Label>
-              <Select value={businessCategory} onValueChange={(val) => {
-                setBusinessCategory(val)
-                if (val !== "custom") setCustomCategory("")
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select business category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BUSINESS_CATEGORIES.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="custom">✏️ Custom (type your own)</SelectItem>
-                </SelectContent>
-              </Select>
-              {businessCategory === "custom" && (
-                <Input
-                  placeholder="e.g. printing press, tent house, astrologer..."
-                  value={customCategory}
-                  onChange={(e) => setCustomCategory(e.target.value)}
-                  className="mt-2"
-                />
-              )}
+                {COUNTRIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              {/* City / state text input */}
+              <input
+                type="text"
+                placeholder="e.g. Mumbai, California"
+                value={cityState}
+                onChange={(e) => setCityState(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && canSearch && handleSearch()}
+                className="flex-1 min-w-0 bg-white border border-neutral-200 rounded-lg px-4 py-2.5 text-sm text-neutral-900 placeholder-neutral-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+              />
             </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="max-results">Max Results</Label>
-              <Select value={maxResults} onValueChange={setMaxResults}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="25">25 results</SelectItem>
-                  <SelectItem value="50">50 results</SelectItem>
-                  <SelectItem value="100">100 results</SelectItem>
-                  <SelectItem value="200">200 results</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="website-filter">Website Filter</Label>
-              <Select value={websiteFilter} onValueChange={setWebsiteFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">🌐 Any (with or without)</SelectItem>
-                  <SelectItem value="with">✅ With website only</SelectItem>
-                  <SelectItem value="without">❌ Without website only</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Filter results by website presence
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={validateWhatsApp}
-                  onChange={(e) => setValidateWhatsApp(e.target.checked)}
-                  className="rounded"
-                />
-                <MessageCircle className="h-4 w-4" />
-                Validate WhatsApp Numbers
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Check if phone numbers have active WhatsApp accounts
-              </p>
-            </div>
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3 mb-5 pb-5 border-b border-neutral-100">
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-neutral-500">Max results:</label>
+            <select
+              value={maxResults}
+              onChange={(e) => setMaxResults(e.target.value)}
+              className="bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-900 focus:outline-none focus:border-blue-500 transition-all"
+            >
+              {resultOptions.map((n) => (
+                <option key={n} value={String(n)}>{n}</option>
+              ))}
+            </select>
+            <span className="text-[11px] text-neutral-400">
+              max {planMax.toLocaleString()} on {plan} plan
+            </span>
           </div>
 
-          <Button 
-            onClick={handleScrape} 
-            disabled={isLoading || !selectedCountry || (isIndia && !selectedState) || !selectedCity || !effectiveCategory}
-            className="w-full md:w-auto"
+          {/* Phone + Website filters — paid plans only */}
+          {canFilter ? (
+            <>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-neutral-500">Phone:</label>
+                <select
+                  value={phoneFilter}
+                  onChange={(e) => setPhoneFilter(e.target.value)}
+                  className="bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-900 focus:outline-none focus:border-blue-500 transition-all"
+                >
+                  <option value="any">Any</option>
+                  <option value="with">With phone only</option>
+                  <option value="without">Without phone only</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-neutral-500">Website:</label>
+                <select
+                  value={websiteFilter}
+                  onChange={(e) => setWebsiteFilter(e.target.value)}
+                  className="bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-900 focus:outline-none focus:border-blue-500 transition-all"
+                >
+                  <option value="any">Any</option>
+                  <option value="with">With website only</option>
+                  <option value="without">Without website only</option>
+                </select>
+              </div>
+            </>
+          ) : (
+            <Link
+              href="/dashboard/billing"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-neutral-200 text-neutral-400 bg-neutral-50 hover:border-blue-300 hover:text-blue-600 transition-all group"
+            >
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" className="flex-shrink-0">
+                <rect x="1.5" y="5" width="8" height="6" rx="1" fill="currentColor" opacity=".4"/>
+                <path d="M3 5V3.5a2.5 2.5 0 1 1 5 0V5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              Phone &amp; website filters
+              <span className="text-[10px] font-semibold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Starter+</span>
+            </Link>
+          )}
+
+        </div>
+
+        {/* Submit */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSearch}
+            disabled={!canSearch}
+            className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-lg transition-colors text-sm"
           >
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Scraping Google Maps...
+                <Loader2 size={15} className="animate-spin" />
+                Finding businesses…
               </>
             ) : (
               <>
-                <Search className="mr-2 h-4 w-4" />
-                Scrape Google Maps
+                <MagnifyingGlass weight="bold" size={15} />
+                Find Leads
               </>
             )}
-          </Button>
-        </CardContent>
-      </Card>
+          </button>
 
-      {/* Error Alert */}
+        </div>
+      </div>
+
+{/* ── Error ────────────────────────────────────────────────────────────── */}
       {error && (
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 flex items-start gap-3 text-sm">
+          <AlertCircle size={15} className="flex-shrink-0 mt-0.5 text-red-500" strokeWidth={2} />
+          <span>{error}</span>
+        </div>
       )}
 
-      {/* Results */}
-      {leads.length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Building className="h-5 w-5" />
-              Found {leads.length} Business{leads.length !== 1 ? 'es' : ''}
-              {validateWhatsApp && leads.some(lead => lead.hasWhatsApp) && (
-                <span className="text-sm font-normal text-green-600">
-                  ({leads.filter(lead => lead.hasWhatsApp).length} with WhatsApp)
-                </span>
-              )}
-              {isValidatingWhatsApp && (
-                <span className="text-sm font-normal text-muted-foreground flex items-center gap-1">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Validating WhatsApp...
-                </span>
-              )}
-            </CardTitle>
-            <Button onClick={exportToCSV} variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" />
-              Export CSV
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Business Name</TableHead>
-                    <TableHead>Address</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>WhatsApp</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Reviews</TableHead>
-                    <TableHead>Website</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leads.map((lead, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">
-                        {lead.title || "N/A"}
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {lead.address || "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        {lead.phone ? (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            <span className="text-sm">{lead.phone}</span>
-                          </div>
-                        ) : (
-                          "N/A"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {lead.phone ? (
-                          <div className="flex items-center gap-1">
-                            {lead.whatsAppStatus === 'checking' && (
-                              <>
-                                <Clock className="h-3 w-3 animate-spin" />
-                                <span className="text-xs text-muted-foreground">Checking...</span>
-                              </>
-                            )}
-                            {lead.whatsAppStatus === 'active' && (
-                              <>
-                                <CheckCircle className="h-3 w-3 text-green-600" />
-                                <span className="text-xs text-green-600">Active</span>
-                              </>
-                            )}
-                            {lead.whatsAppStatus === 'inactive' && (
-                              <>
-                                <XCircle className="h-3 w-3 text-red-600" />
-                                <span className="text-xs text-red-600">Inactive</span>
-                              </>
-                            )}
-                            {lead.whatsAppStatus === 'error' && (
-                              <>
-                                <XCircle className="h-3 w-3 text-orange-600" />
-                                <span className="text-xs text-orange-600">Error</span>
-                              </>
-                            )}
-                            {!lead.whatsAppStatus && !validateWhatsApp && (
-                              <span className="text-xs text-muted-foreground">Not checked</span>
-                            )}
-                          </div>
-                        ) : (
-                          "N/A"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {lead.rating ? (
-                          <span className="text-sm">
-                            ⭐ {lead.rating}
-                          </span>
-                        ) : (
-                          "N/A"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {lead.reviewsCount ? (
-                          <span className="text-sm text-muted-foreground">
-                            {lead.reviewsCount} reviews
-                          </span>
-                        ) : (
-                          "N/A"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {lead.website ? (
-                          <a
-                            href={lead.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline text-sm"
-                          >
-                            Visit
-                          </a>
-                        ) : (
-                          "N/A"
-                        )}
-                      </TableCell>
-                    </TableRow>
+      {/* ── Skeleton loader ──────────────────────────────────────────────────── */}
+      {isLoading && (
+        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-neutral-100 flex items-center gap-2">
+            <div className="h-3.5 w-32 bg-neutral-100 rounded animate-pulse" />
+            <div className="h-3.5 w-24 bg-neutral-100 rounded animate-pulse ml-2" />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-neutral-100 bg-neutral-50">
+                  {["Business Name", "Phone", "Rating", "Website", "Address", "Maps"].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left">
+                      <div className="h-2.5 w-16 bg-neutral-200 rounded" />
+                    </th>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <SkeletonRow key={i} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
-      {/* Best Practices */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">📋 Best Practices</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>• <strong>Location Selection:</strong> Choose country first, then select from available cities</p>
-          <p>• <strong>Business Categories:</strong> Choose the most relevant category for better results</p>
-          <p>• <strong>Contact Information:</strong> Not all businesses may have phone numbers or websites listed</p>
-          <p>• <strong>Data Usage:</strong> Use scraped data responsibly and respect business privacy</p>
-          <p>• <strong>Rate Limits:</strong> Large scraping requests may take longer to process</p>
-        </CardContent>
-      </Card>
+      {/* ── Results table ────────────────────────────────────────────────────── */}
+      {!isLoading && leads.length > 0 && (
+        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+          {/* Results header */}
+          <div className="px-5 py-4 border-b border-neutral-100 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-sm font-semibold text-neutral-900">
+                  {leads.length} business{leads.length !== 1 ? "es" : ""} found
+                </span>
+              </div>
+              {selectedRows.size > 0 && (
+                <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full font-medium">
+                  {selectedRows.size} selected
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {selectedRows.size > 0 && (
+                <button
+                  onClick={() => exportRows(selectedLeads, "-selected")}
+                  className="flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all"
+                >
+                  <Export weight="bold" size={13} />
+                  Export selected ({selectedRows.size})
+                </button>
+              )}
+              <button
+                onClick={() => exportRows(leads)}
+                className="flex items-center gap-1.5 bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-700 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all"
+              >
+                <Download size={13} strokeWidth={2.5} />
+                Export all CSV
+              </button>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-100 bg-neutral-50">
+                  <th className="px-4 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.size === leads.length && leads.length > 0}
+                      onChange={toggleAll}
+                      className="rounded accent-blue-700"
+                    />
+                  </th>
+                  {["Business Name", "Category", "Phone", "Rating", "Website", "Maps"].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-400 uppercase tracking-wider whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {leads.map((lead, i) => (
+                  <tr
+                    key={i}
+                    className={`border-b border-neutral-50 transition-colors ${
+                      selectedRows.has(i) ? "bg-blue-50" : "hover:bg-neutral-50"
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.has(i)}
+                        onChange={() => toggleRow(i)}
+                        className="rounded accent-blue-700"
+                      />
+                    </td>
+
+                    {/* Business name + address */}
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-neutral-900 max-w-[200px] truncate text-[0.8125rem]">
+                        {lead.title || "N/A"}
+                      </div>
+                      <div className="text-[11px] text-neutral-400 max-w-[200px] truncate mt-0.5">
+                        {lead.address}
+                      </div>
+                    </td>
+
+                    {/* Category */}
+                    <td className="px-4 py-3">
+                      {lead.category ? (
+                        <span className="text-xs bg-neutral-100 border border-neutral-200 text-neutral-500 px-2 py-0.5 rounded-md truncate max-w-[110px] block">
+                          {lead.category}
+                        </span>
+                      ) : (
+                        <span className="text-neutral-300 text-xs">—</span>
+                      )}
+                    </td>
+
+                    {/* Phone */}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {lead.phone ? (
+                        <div className="flex items-center gap-1.5 text-xs text-neutral-700">
+                          <Phone weight="fill" size={11} className="text-neutral-400 flex-shrink-0" />
+                          {lead.phone}
+                        </div>
+                      ) : (
+                        <span className="text-neutral-300 text-xs">—</span>
+                      )}
+                    </td>
+
+                    {/* Rating */}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {lead.rating ? (
+                        <div className="flex items-center gap-1">
+                          <Star weight="fill" size={11} className="text-amber-400" />
+                          <span className="text-xs font-semibold text-neutral-800">{lead.rating}</span>
+                          {lead.reviewsCount && (
+                            <span className="text-[11px] text-neutral-400">({lead.reviewsCount})</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-neutral-300 text-xs">—</span>
+                      )}
+                    </td>
+
+                    {/* Website */}
+                    <td className="px-4 py-3">
+                      {lead.website ? (
+                        <a
+                          href={lead.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs font-medium transition-colors"
+                        >
+                          <Globe weight="fill" size={11} />
+                          Visit
+                        </a>
+                      ) : (
+                        <span className="text-neutral-300 text-xs">—</span>
+                      )}
+                    </td>
+
+                    {/* Maps */}
+                    <td className="px-4 py-3">
+                      {lead.mapsUrl ? (
+                        <a
+                          href={lead.mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 text-xs font-medium transition-colors"
+                        >
+                          <MapPin weight="fill" size={11} />
+                          Maps
+                        </a>
+                      ) : (
+                        <span className="text-neutral-300 text-xs">—</span>
+                      )}
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Table footer */}
+          <div className="px-5 py-3 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
+            <span className="text-xs text-neutral-400">
+              {leads.length} result{leads.length !== 1 ? "s" : ""}
+              {selectedRows.size > 0 && ` · ${selectedRows.size} selected`}
+            </span>
+            <button
+              onClick={() => exportRows(leads)}
+              className="flex items-center gap-1.5 text-xs font-medium text-blue-700 hover:text-blue-800 transition-colors"
+            >
+              <DownloadSimple weight="bold" size={12} />
+              Download CSV
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Empty state ──────────────────────────────────────────────────────── */}
+      {!isLoading && leads.length === 0 && !error && keyword && (
+        <div className="bg-white border border-neutral-200 rounded-xl p-14 text-center shadow-sm">
+          <div className="w-11 h-11 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center mx-auto mb-3">
+            <Buildings size={20} className="text-neutral-300" />
+          </div>
+          <p className="text-sm font-semibold text-neutral-700 mb-1">No results yet</p>
+          <p className="text-xs text-neutral-400">Enter a keyword and location above, then click "Find Leads".</p>
+        </div>
+      )}
     </div>
   )
 }

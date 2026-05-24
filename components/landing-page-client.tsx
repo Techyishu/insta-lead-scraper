@@ -231,8 +231,8 @@ function Hero() {
             className="absolute -left-6 top-[28%] bg-white border border-neutral-200 rounded-xl p-3 shadow-md hidden lg:block"
             style={{ animation: "float 4s ease-in-out infinite" }}
           >
-            <div className="font-display font-bold text-xl text-neutral-900">10M+</div>
-            <div className="text-xs text-neutral-400">Leads generated</div>
+            <div className="font-display font-bold text-xl text-neutral-900">Try free</div>
+            <div className="text-xs text-neutral-400">50 credits included</div>
           </div>
           <div
             className="absolute -right-4 bottom-[22%] bg-white border border-emerald-200 rounded-xl p-3 shadow-md hidden lg:block"
@@ -258,7 +258,7 @@ function Hero() {
 
 function Stats() {
   const items = [
-    { value: "10M+", label: "Leads Generated" },
+    { value: "99%+", label: "Data Accuracy" },
     { value: "200+", label: "Business Categories" },
     { value: "50+", label: "Countries Supported" },
     { value: "< 30s", label: "Avg. Search Time" },

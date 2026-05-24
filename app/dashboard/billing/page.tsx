@@ -15,7 +15,7 @@ const PLANS = [
   {
     id: "free",
     name: "Free",
-    price: { monthly: 0, annual: 0 },
+    price: 0,
     credits: "50 total credits",
     features: ["50 credits total (lifetime)", "Phone & website filter", "CSV export", "Basic search"],
     cta: "Current plan",
@@ -23,7 +23,7 @@ const PLANS = [
   {
     id: "starter",
     name: "Starter",
-    price: { monthly: 49, annual: 39 },
+    price: 49,
     credits: "5,000 credits/month",
     features: ["5,000 credits/month", "Phone & website filter", "CSV export", "Email support"],
     cta: "Upgrade to Starter",
@@ -31,7 +31,7 @@ const PLANS = [
   {
     id: "growth",
     name: "Growth",
-    price: { monthly: 89, annual: 71 },
+    price: 89,
     credits: "10,000 credits/month",
     popular: true,
     features: [
@@ -61,7 +61,6 @@ function BillingPageInner() {
   const paymentStatus = searchParams.get("payment")   // "success"
   const paymentPlan   = searchParams.get("plan")
 
-  const [annual, setAnnual]               = useState(false)
   const [currentPlan, setCurrentPlan]     = useState("free")
   const [creditsUsed, setCreditsUsed]     = useState(0)
   const [creditsLimit, setCreditsLimit]   = useState(50)
@@ -436,28 +435,9 @@ function BillingPageInner() {
         )}
       </div>
 
-      {/* Billing toggle */}
-      <div className="flex items-center gap-4">
+      {/* Plan section header */}
+      <div>
         <h2 className="text-sm font-semibold text-neutral-900">Choose a plan</h2>
-        <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1">
-          <button
-            onClick={() => setAnnual(false)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-              !annual ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setAnnual(true)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${
-              annual ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
-            }`}
-          >
-            Annual
-            <span className="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded font-bold">−20%</span>
-          </button>
-        </div>
       </div>
 
       {/* Plan cards */}
@@ -493,9 +473,9 @@ function BillingPageInner() {
                 <div className="text-xs font-medium text-neutral-500 mb-1">{plan.name}</div>
                 <div className="flex items-end gap-1 mb-1">
                   <span className="font-display font-bold text-2xl text-neutral-900 leading-none">
-                    ${annual ? plan.price.annual : plan.price.monthly}
+                    ${plan.price}
                   </span>
-                  {plan.price.monthly > 0 && (
+                  {plan.price > 0 && (
                     <span className="text-neutral-400 text-xs mb-0.5">/mo</span>
                   )}
                 </div>
@@ -523,7 +503,7 @@ function BillingPageInner() {
                 <div className="w-full text-center py-2.5 rounded-lg text-xs font-semibold bg-neutral-50 text-neutral-300 border border-neutral-100 cursor-not-allowed">
                   Downgrade
                 </div>
-              ) : plan.price.monthly === 0 ? null : (
+              ) : plan.price === 0 ? null : (
                 <button
                   onClick={() => handleUpgradeClick(plan.id)}
                   disabled={isLoading || !!checkoutLoading || !!previewLoading}

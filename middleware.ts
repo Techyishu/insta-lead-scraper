@@ -23,7 +23,23 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // getUser() validates the session against the server and refreshes the access
+  // token when needed. If the stored refresh token is expired or revoked it
+  // throws AuthApiError ("Refresh Token Not Found"). In that case we treat the
+  // visitor as unauthenticated AND sign them out locally so the stale cookie is
+  // cleared from the response before it reaches the browser.
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      // Purge the stale session so the browser stops sending the bad token.
+      await supabase.auth.signOut({ scope: 'local' })
+    } else {
+      user = data.user
+    }
+  } catch {
+    // Network or unexpected error — treat as unauthenticated, don't crash.
+  }
 
   const { pathname } = request.nextUrl
   const isDashboard = pathname.startsWith('/dashboard')

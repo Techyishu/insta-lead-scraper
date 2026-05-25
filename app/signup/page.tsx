@@ -3,25 +3,56 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Eye, EyeOff, ArrowRight, Check, Zap } from "lucide-react"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 const plans = [
-  { id: "free", name: "Free", price: "$0", credits: "50 credits total", popular: false },
-  { id: "starter", name: "Starter", price: "$49/mo", credits: "5,000 credits/mo", popular: false },
-  { id: "growth", name: "Growth", price: "$89/mo", credits: "10,000 credits/mo", popular: true },
+  {
+    id: "free",
+    name: "Free",
+    price: "$0",
+    credits: "50 credits total",
+    emoji: "🌱",
+    desc: "Perfect to try it out",
+    popular: false,
+  },
+  {
+    id: "starter",
+    name: "Starter",
+    price: "$49/mo",
+    credits: "5,000 credits/mo",
+    emoji: "🚀",
+    desc: "For active prospectors",
+    popular: false,
+  },
+  {
+    id: "growth",
+    name: "Growth",
+    price: "$89/mo",
+    credits: "10,000 credits/mo",
+    emoji: "⚡",
+    desc: "For agencies & teams",
+    popular: true,
+  },
+]
+
+const perks = [
+  { icon: "🗺️", text: "Google Maps data, verified in real-time" },
+  { icon: "📞", text: "Phone, website, ratings & categories" },
+  { icon: "📤", text: "One-click CSV export — your CRM ready" },
+  { icon: "🔒", text: "No credit card needed to start" },
 ]
 
 export default function SignupPage() {
-  const [step, setStep] = useState(1)
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPass, setShowPass] = useState(false)
+  const [step, setStep]             = useState(1)
+  const [name, setName]             = useState("")
+  const [email, setEmail]           = useState("")
+  const [password, setPassword]     = useState("")
+  const [showPass, setShowPass]     = useState(false)
   const [selectedPlan, setSelectedPlan] = useState("free")
-  const [agreed, setAgreed] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [agreed, setAgreed]         = useState(false)
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState("")
   const router = useRouter()
 
   const handleStep1 = (e: React.FormEvent) => {
@@ -32,7 +63,6 @@ export default function SignupPage() {
   const handleSignup = async () => {
     setError("")
     setLoading(true)
-
     const supabase = createClient()
     const siteUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
     const { error } = await supabase.auth.signUp({
@@ -43,203 +73,247 @@ export default function SignupPage() {
         emailRedirectTo: `${siteUrl}/auth/callback`,
       },
     })
-
     if (error) {
       setError(error.message)
       setLoading(false)
       return
     }
-
     setLoading(false)
     router.push(`/verify-email?email=${encodeURIComponent(email)}`)
   }
 
-  return (
-    <div className="min-h-screen bg-[#FAFAF9] flex flex-col items-center justify-center px-5 py-12">
-      {/* Logo */}
-      <Link href="/" className="flex items-center gap-2.5 mb-10">
-        <img src="/logo.png" alt="LeadMapper" className="w-8 h-8 object-contain" />
-        <span className="font-display font-bold text-neutral-900 text-xl tracking-tight">LeadMapper</span>
-      </Link>
+  const inputCls = "w-full font-kalam text-sm text-[#1A1A1A] placeholder:text-[#B8B5AA] bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[10px] px-4 py-3 outline-none focus:shadow-brutal transition-all"
 
-      {/* Progress */}
-      <div className="flex items-center gap-2 mb-8">
-        {[1, 2].map((s) => (
-          <div
-            key={s}
-            className={`h-1.5 rounded-full transition-all ${
-              s === step ? "w-8 bg-blue-700" : s < step ? "w-4 bg-emerald-500" : "w-4 bg-neutral-200"
-            }`}
-          />
-        ))}
+  return (
+    <div className="min-h-screen bg-[#F7F4EC] flex flex-col lg:flex-row">
+
+      {/* ── Left panel ── */}
+      <div className="hidden lg:flex flex-col justify-between w-[460px] flex-shrink-0 bg-[#1A1A1A] border-r-2 border-[#1A1A1A] p-10 relative overflow-hidden">
+        <div className="absolute top-[-60px] right-[-60px] w-48 h-48 bg-[#FFE45E]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-[-40px] left-[-40px] w-36 h-36 bg-[#6FCF97]/10 rounded-full blur-2xl pointer-events-none" />
+
+        <Link href="/" className="relative z-10">
+          <span className="font-kalam font-bold text-[#FFE45E] text-xl">LeadMapper</span>
+        </Link>
+
+        <div className="relative z-10 space-y-8">
+          <div>
+            <h2 className="font-kalam font-bold text-4xl text-[#F7F4EC] leading-tight mb-3">
+              Start finding leads<br />
+              <span className="text-[#FFE45E]">for free today.</span>
+            </h2>
+            <p className="font-jetbrains text-[12px] text-[#6B6B6B] leading-relaxed">
+              50 free credits, no card needed. Upgrade when you&apos;re ready.
+            </p>
+          </div>
+
+          {/* Perks */}
+          <div className="space-y-3">
+            {perks.map((p, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-[#F7F4EC] border-2 border-[#FFE45E] rounded-[8px] flex items-center justify-center text-lg flex-shrink-0">
+                  {p.icon}
+                </div>
+                <span className="font-kalam text-[14px] text-[#EFEBE0]">{p.text}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Social proof */}
+          <div className="bg-[#F7F4EC]/5 border-2 border-[#FFE45E]/30 rounded-[10px] p-4">
+            <p className="font-kalam text-[14px] text-[#EFEBE0] leading-relaxed mb-2">
+              &ldquo;Found 200 plumber leads in Chicago in under a minute. Booked 3 demos the same day.&rdquo;
+            </p>
+            <p className="font-jetbrains text-[10px] text-[#6B6B6B]">— SDR at a B2B SaaS company</p>
+          </div>
+        </div>
+
+        <p className="font-jetbrains text-[10px] text-[#3A3A3A] relative z-10">
+          © {new Date().getFullYear()} LeadMapper. All rights reserved.
+        </p>
       </div>
 
-      <div className="w-full max-w-[420px] bg-white border border-neutral-200 rounded-xl p-8 shadow-sm">
-        {step === 1 ? (
-          <>
-            <h1 className="font-display font-bold text-2xl text-neutral-900 mb-1">Create your account</h1>
-            <p className="text-neutral-400 text-sm mb-7">Start with 50 free leads — no credit card required.</p>
+      {/* ── Right panel — form ── */}
+      <div className="flex-1 flex flex-col items-center justify-center px-5 py-12 min-h-screen lg:min-h-0">
+        {/* Mobile logo */}
+        <Link href="/" className="mb-8 lg:hidden">
+          <span className="font-kalam font-bold text-[#1A1A1A] text-xl">LeadMapper</span>
+        </Link>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-5">
-                {error}
+        {/* Step indicator */}
+        <div className="flex items-center gap-2 mb-7">
+          {[1, 2].map((s) => (
+            <div key={s} className="flex items-center gap-2">
+              <div className={`flex items-center justify-center w-7 h-7 rounded-full border-2 font-kalam font-bold text-[13px] transition-all ${
+                s === step
+                  ? "bg-[#1A1A1A] border-[#1A1A1A] text-[#FFE45E]"
+                  : s < step
+                  ? "bg-[#6FCF97] border-[#1A1A1A] text-[#1A1A1A]"
+                  : "bg-[#EFEBE0] border-[#B8B5AA] text-[#B8B5AA]"
+              }`}>
+                {s < step ? "✓" : s}
               </div>
-            )}
-
-            <form onSubmit={handleStep1} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Full name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-lg px-4 py-3 text-sm text-neutral-900 placeholder-neutral-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Work email</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="you@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-lg px-4 py-3 text-sm text-neutral-900 placeholder-neutral-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPass ? "text" : "password"}
-                    required
-                    minLength={8}
-                    placeholder="Min. 8 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-white border border-neutral-200 rounded-lg px-4 py-3 pr-11 text-sm text-neutral-900 placeholder-neutral-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-                  >
-                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  required
-                  checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)}
-                  className="mt-0.5 accent-blue-700"
-                />
-                <span className="text-xs text-neutral-400 leading-relaxed">
-                  I agree to the{" "}
-                  <Link href="/terms" className="text-blue-700 hover:text-blue-800">Terms of Service</Link>
-                  {" "}and{" "}
-                  <Link href="/privacy" className="text-blue-700 hover:text-blue-800">Privacy Policy</Link>.
-                </span>
-              </label>
-
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors text-sm mt-1"
-              >
-                Continue <ArrowRight size={14} strokeWidth={2.5} />
-              </button>
-            </form>
-
-            <div className="flex flex-wrap items-center justify-center gap-4 mt-5">
-              {["No credit card", "50 free leads", "Cancel anytime"].map((item) => (
-                <div key={item} className="flex items-center gap-1 text-xs text-neutral-400">
-                  <Check size={11} strokeWidth={2.5} className="text-emerald-500" />
-                  {item}
-                </div>
-              ))}
+              <span className={`font-jetbrains text-[11px] hidden sm:block ${s === step ? "text-[#1A1A1A] font-bold" : "text-[#B8B5AA]"}`}>
+                {s === 1 ? "Your details" : "Choose plan"}
+              </span>
+              {s < 2 && <div className={`w-8 h-0.5 rounded-full ${step > 1 ? "bg-[#6FCF97]" : "bg-[#EFEBE0]"}`} />}
             </div>
-          </>
-        ) : (
-          <>
-            <h1 className="font-display font-bold text-2xl text-neutral-900 mb-1">Choose your plan</h1>
-            <p className="text-neutral-400 text-sm mb-6">Start free or pick a plan that fits your needs.</p>
+          ))}
+        </div>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-5">
-                {error}
-              </div>
-            )}
+        <div className="w-full max-w-[420px]">
+          <div className="bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[14px] shadow-brutal-lg p-8">
 
-            <div className="space-y-2.5 mb-6">
-              {plans.map((plan) => (
-                <button
-                  key={plan.id}
-                  type="button"
-                  onClick={() => setSelectedPlan(plan.id)}
-                  className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
-                    selectedPlan === plan.id
-                      ? "border-blue-700 bg-blue-50 ring-1 ring-blue-700"
-                      : "border-neutral-200 bg-white hover:border-neutral-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      selectedPlan === plan.id ? "border-blue-700" : "border-neutral-300"
-                    }`}>
-                      {selectedPlan === plan.id && <div className="w-2 h-2 rounded-full bg-blue-700" />}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-neutral-900">{plan.name}</span>
-                        {plan.popular && (
-                          <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded font-semibold">Popular</span>
-                        )}
-                      </div>
-                      <div className="text-xs text-neutral-400">{plan.credits}</div>
+            {step === 1 ? (
+              <>
+                <div className="mb-7">
+                  <h1 className="font-kalam font-bold text-3xl text-[#1A1A1A] mb-1">Create account 🎉</h1>
+                  <p className="font-jetbrains text-[12px] text-[#6B6B6B]">Start with 50 free leads — no credit card required.</p>
+                </div>
+
+                {error && (
+                  <div className="bg-[#FF6B5C]/10 border-2 border-[#FF6B5C] rounded-[8px] px-4 py-3 font-kalam text-sm text-[#FF6B5C] mb-5">
+                    ⚠ {error}
+                  </div>
+                )}
+
+                <form onSubmit={handleStep1} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider">Full name</label>
+                    <input type="text" required placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider">Work email</label>
+                    <input type="email" required placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider">Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPass ? "text" : "password"}
+                        required
+                        minLength={8}
+                        placeholder="Min. 8 characters"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={inputCls + " pr-11"}
+                      />
+                      <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#6B6B6B] hover:text-[#1A1A1A] transition-colors">
+                        {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-neutral-900">{plan.price}</span>
+
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <div
+                      onClick={() => setAgreed(!agreed)}
+                      className={`w-5 h-5 mt-0.5 rounded-[4px] border-2 border-[#1A1A1A] flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${agreed ? "bg-[#1A1A1A]" : "bg-[#EFEBE0]"}`}
+                    >
+                      {agreed && <span className="text-[#FFE45E] text-[11px] font-bold leading-none">✓</span>}
+                    </div>
+                    <input type="checkbox" required checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="sr-only" />
+                    <span className="font-kalam text-[13px] text-[#6B6B6B] leading-relaxed">
+                      I agree to the{" "}
+                      <Link href="/terms" className="text-[#1A1A1A] font-bold underline underline-offset-2 hover:opacity-70">Terms</Link>
+                      {" "}and{" "}
+                      <Link href="/privacy" className="text-[#1A1A1A] font-bold underline underline-offset-2 hover:opacity-70">Privacy Policy</Link>.
+                    </span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    className="w-full font-kalam font-bold text-[#F7F4EC] bg-[#1A1A1A] border-2 border-[#1A1A1A] rounded-[10px] py-3.5 text-base btn-press shadow-brutal mt-2"
+                  >
+                    Continue →
+                  </button>
+                </form>
+
+                <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
+                  {["✓ No credit card", "✓ 50 free leads", "✓ Cancel anytime"].map((item) => (
+                    <span key={item} className="font-kalam text-[12px] text-[#6B6B6B]">{item}</span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-6">
+                  <h1 className="font-kalam font-bold text-3xl text-[#1A1A1A] mb-1">Pick your plan 📋</h1>
+                  <p className="font-jetbrains text-[12px] text-[#6B6B6B]">Start free or pick a plan that fits your needs.</p>
+                </div>
+
+                {error && (
+                  <div className="bg-[#FF6B5C]/10 border-2 border-[#FF6B5C] rounded-[8px] px-4 py-3 font-kalam text-sm text-[#FF6B5C] mb-5">
+                    ⚠ {error}
+                  </div>
+                )}
+
+                <div className="space-y-2.5 mb-6">
+                  {plans.map((plan) => (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => setSelectedPlan(plan.id)}
+                      className={`w-full flex items-center justify-between p-4 rounded-[10px] border-2 transition-all text-left relative ${
+                        selectedPlan === plan.id
+                          ? "bg-[#FFE45E] border-[#1A1A1A] shadow-brutal"
+                          : "bg-[#EFEBE0] border-[#1A1A1A] hover:bg-[#F7F4EC]"
+                      }`}
+                    >
+                      {plan.popular && selectedPlan !== plan.id && (
+                        <div className="absolute -top-2.5 right-3 font-jetbrains text-[9px] font-bold bg-[#FF6B5C] text-[#F7F4EC] border border-[#1A1A1A] rounded-full px-2 py-0.5">
+                          Popular
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                          selectedPlan === plan.id ? "bg-[#1A1A1A] border-[#1A1A1A]" : "bg-[#F7F4EC] border-[#B8B5AA]"
+                        }`}>
+                          {selectedPlan === plan.id && <div className="w-2 h-2 rounded-full bg-[#FFE45E]" />}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-kalam font-bold text-[#1A1A1A] text-sm">{plan.emoji} {plan.name}</span>
+                          </div>
+                          <div className="font-jetbrains text-[10px] text-[#6B6B6B]">{plan.credits} · {plan.desc}</div>
+                        </div>
+                      </div>
+                      <span className="font-kalam font-bold text-[#1A1A1A] text-sm">{plan.price}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleSignup}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 font-kalam font-bold text-[#F7F4EC] bg-[#1A1A1A] border-2 border-[#1A1A1A] rounded-[10px] py-3.5 text-base btn-press shadow-brutal disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading
+                    ? <><Loader2 size={15} className="animate-spin" /> Creating account…</>
+                    : selectedPlan === "free" ? "🎉 Get 50 Free Leads →" : "⚡ Start My Plan →"
+                  }
                 </button>
-              ))}
+
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="w-full text-center font-kalam text-sm text-[#6B6B6B] hover:text-[#1A1A1A] mt-3 transition-colors"
+                >
+                  ← Back
+                </button>
+              </>
+            )}
+
+            <div className="mt-6 pt-6 border-t-2 border-[#EFEBE0] text-center">
+              <p className="font-kalam text-sm text-[#6B6B6B]">
+                Already have an account?{" "}
+                <Link href="/login" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70 transition-opacity">
+                  Sign in →
+                </Link>
+              </p>
             </div>
-
-            <button
-              onClick={handleSignup}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white font-semibold py-3 rounded-lg transition-colors text-sm"
-            >
-              {loading ? "Creating account…" : (
-                <>
-                  <Zap size={14} strokeWidth={2} />
-                  {selectedPlan === "free" ? "Get 50 Free Leads" : "Start My Plan"}
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              className="w-full text-center text-xs text-neutral-400 hover:text-neutral-600 mt-3 transition-colors"
-            >
-              ← Back
-            </button>
-          </>
-        )}
-
-        <div className="mt-6 pt-6 border-t border-neutral-100 text-center">
-          <p className="text-sm text-neutral-400">
-            Already have an account?{" "}
-            <Link href="/login" className="text-blue-700 hover:text-blue-800 font-semibold transition-colors">
-              Sign in
-            </Link>
-          </p>
+          </div>
         </div>
       </div>
     </div>

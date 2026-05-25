@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Bricolage_Grotesque } from 'next/font/google'
+import { Inter, Bricolage_Grotesque, Kalam, JetBrains_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import CookieBanner from '@/components/cookie-banner'
 import './globals.css'
@@ -13,6 +13,20 @@ const inter = Inter({
 const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
   variable: '--font-bricolage',
+  display: 'swap',
+})
+
+const kalam = Kalam({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-kalam',
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-jetbrains',
   display: 'swap',
 })
 
@@ -93,7 +107,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${bricolage.variable}`}>
+    <html lang="en" className={`${inter.variable} ${bricolage.variable} ${kalam.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased">
         {children}
         <Analytics />

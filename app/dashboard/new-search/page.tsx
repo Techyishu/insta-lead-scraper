@@ -1,13 +1,18 @@
+import { Suspense } from "react"
 import GoogleMapsScraper from "@/components/google-maps-scraper"
 
 export default function NewSearchPage() {
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="mb-7">
-        <h1 className="font-display font-bold text-2xl text-neutral-900 mb-1">New Search</h1>
-        <p className="text-neutral-400 text-sm">Search local businesses by keyword and location. Export results as CSV.</p>
+      <div className="mb-6">
+        <h2 className="font-kalam font-bold text-2xl text-[#1A1A1A] mb-1">New search</h2>
+        <p className="font-jetbrains text-[12px] text-[#6B6B6B]">
+          Search uses 1 credit per result returned (max 200)
+        </p>
       </div>
-      <GoogleMapsScraper />
+      <Suspense>
+        <GoogleMapsScraper />
+      </Suspense>
     </div>
   )
 }

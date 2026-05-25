@@ -3,16 +3,16 @@
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useState, useEffect, Suspense } from "react"
-import { Search, Mail, RefreshCw, CheckCircle } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const email = searchParams.get("email") ?? ""
 
-  const [resent, setResent] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [resent, setResent]       = useState(false)
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState("")
   const [countdown, setCountdown] = useState(0)
 
   useEffect(() => {
@@ -30,9 +30,7 @@ function VerifyEmailContent() {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
 
     setLoading(false)
@@ -45,63 +43,82 @@ function VerifyEmailContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] flex flex-col items-center justify-center px-5 py-12">
+    <div className="min-h-screen bg-[#F7F4EC] flex flex-col items-center justify-center px-5 py-12">
+      {/* Logo */}
       <Link href="/" className="flex items-center gap-2.5 mb-10">
         <img src="/logo.png" alt="LeadMapper" className="w-8 h-8 object-contain" />
-        <span className="font-display font-bold text-neutral-900 text-xl tracking-tight">LeadMapper</span>
+        <span className="font-kalam font-bold text-[#1A1A1A] text-xl">LeadMapper</span>
       </Link>
 
-      <div className="w-full max-w-[420px] bg-white border border-neutral-200 rounded-xl p-10 shadow-sm text-center">
-        <div className="w-14 h-14 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-5">
-          <Mail size={26} className="text-blue-700" strokeWidth={1.75} />
+      <div className="w-full max-w-[420px]">
+        <div className="bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[14px] shadow-brutal-lg p-10 text-center">
+          {/* Icon */}
+          <div className="w-16 h-16 bg-[#FFE45E] border-2 border-[#1A1A1A] rounded-[12px] flex items-center justify-center mx-auto mb-5 text-3xl shadow-brutal">
+            ✉️
+          </div>
+
+          <h1 className="font-kalam font-bold text-3xl text-[#1A1A1A] mb-2">Confirm your email</h1>
+          <p className="font-kalam text-sm text-[#6B6B6B] mb-1">We sent a confirmation link to</p>
+
+          {email && (
+            <div className="inline-block bg-[#FFE45E] border-2 border-[#1A1A1A] rounded-[8px] px-4 py-1.5 mb-5 shadow-brutal">
+              <span className="font-kalam font-bold text-[#1A1A1A] text-sm">{email}</span>
+            </div>
+          )}
+          {!email && <p className="font-kalam font-bold text-[#1A1A1A] mb-5">your email address</p>}
+
+          {/* Instructions */}
+          <div className="bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[10px] px-4 py-3 mb-6 text-left">
+            <p className="font-kalam text-[13px] text-[#3A3A3A] leading-relaxed">
+              Click the link in the email to activate your account. Check your spam folder if you don&apos;t see it within a minute.
+            </p>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="bg-[#FF6B5C]/10 border-2 border-[#FF6B5C] rounded-[8px] px-4 py-3 mb-4 font-kalam text-sm text-[#FF6B5C]">
+              ⚠ {error}
+            </div>
+          )}
+
+          {/* Resent success */}
+          {resent && (
+            <div className="bg-[#6FCF97]/20 border-2 border-[#6FCF97] rounded-[8px] px-4 py-3 mb-4 font-kalam text-sm text-[#1A1A1A] flex items-center justify-center gap-2">
+              ✓ Confirmation email resent!
+            </div>
+          )}
+
+          {/* Resend button */}
+          {email && (
+            <button
+              onClick={handleResend}
+              disabled={loading || countdown > 0}
+              className="w-full flex items-center justify-center gap-2 font-kalam font-bold text-[#1A1A1A] bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[10px] py-3 text-sm btn-press shadow-brutal disabled:opacity-50 disabled:cursor-not-allowed mb-4 transition-all"
+            >
+              {loading
+                ? <><Loader2 size={14} className="animate-spin" /> Sending…</>
+                : countdown > 0
+                ? `Resend in ${countdown}s`
+                : "↻ Resend confirmation email"
+              }
+            </button>
+          )}
+
+          <Link href="/login" className="font-kalam text-sm text-[#6B6B6B] hover:text-[#1A1A1A] transition-colors">
+            ← Back to sign in
+          </Link>
         </div>
 
-        <h1 className="font-display font-bold text-2xl text-neutral-900 mb-2">Confirm your email</h1>
-        <p className="text-sm text-neutral-400 mb-1">We sent a confirmation link to</p>
-        <p className="text-sm font-semibold text-neutral-900 mb-6">
-          {email || "your email address"}
-        </p>
-
-        <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-3 mb-6 text-left">
-          <p className="text-xs text-neutral-500 leading-relaxed">
-            Click the link in the email to activate your account. Check your spam folder if you don't see it.
+        {/* Helper note */}
+        <div className="mt-4 bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[10px] shadow-brutal px-4 py-3">
+          <p className="font-jetbrains text-[11px] text-[#6B6B6B] text-center">
+            Wrong email?{" "}
+            <Link href="/signup" className="text-[#1A1A1A] font-bold underline underline-offset-2 hover:opacity-70">
+              Sign up again
+            </Link>
+            {" "}with the correct address.
           </p>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-4">
-            {error}
-          </div>
-        )}
-
-        {resent && (
-          <div className="flex items-center justify-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 mb-4">
-            <CheckCircle size={14} strokeWidth={2.5} />
-            Confirmation email resent.
-          </div>
-        )}
-
-        {email && (
-          <button
-            onClick={handleResend}
-            disabled={loading || countdown > 0}
-            className="w-full flex items-center justify-center gap-2 bg-neutral-100 hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed text-neutral-700 font-medium text-sm py-2.5 rounded-lg transition-colors mb-4"
-          >
-            <RefreshCw size={14} strokeWidth={2} className={loading ? "animate-spin" : ""} />
-            {loading
-              ? "Sending…"
-              : countdown > 0
-              ? `Resend in ${countdown}s`
-              : "Resend confirmation email"}
-          </button>
-        )}
-
-        <Link
-          href="/login"
-          className="text-sm text-neutral-400 hover:text-neutral-700 transition-colors"
-        >
-          ← Back to sign in
-        </Link>
       </div>
     </div>
   )

@@ -2,24 +2,8 @@
 
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import {
-  MagnifyingGlass,
-  DownloadSimple,
-  MapPin,
-  Phone,
-  Globe,
-  Buildings,
-  Star,
-  Export,
-} from "@phosphor-icons/react/dist/ssr"
-import {
-  Loader2,
-  Zap,
-  ArrowRight,
-  Search,
-  AlertCircle,
-  Download,
-} from "lucide-react"
+import { useSearchParams } from "next/navigation"
+import { Loader2, ExternalLink } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 interface SocialMedia {
@@ -50,22 +34,6 @@ interface Credits {
   remaining: number
 }
 
-
-function SkeletonRow() {
-  return (
-    <tr className="border-b border-neutral-100">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <td key={i} className="px-4 py-3">
-          <div
-            className="h-3.5 bg-neutral-100 rounded animate-pulse"
-            style={{ width: `${50 + (i % 3) * 20}%` }}
-          />
-        </td>
-      ))}
-    </tr>
-  )
-}
-
 // ── Country list ──────────────────────────────────────────────────────────────
 const COUNTRIES = [
   "Afghanistan","Albania","Algeria","Andorra","Angola","Argentina","Armenia","Australia",
@@ -87,10 +55,26 @@ const COUNTRIES = [
   "Venezuela","Vietnam","Yemen","Zambia","Zimbabwe",
 ]
 
+function SkeletonRow() {
+  return (
+    <tr className="border-b border-[#EFEBE0]">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <td key={i} className="px-4 py-3">
+          <div
+            className="h-3.5 bg-[#EFEBE0] rounded animate-pulse"
+            style={{ width: `${50 + (i % 3) * 20}%` }}
+          />
+        </td>
+      ))}
+    </tr>
+  )
+}
+
 export default function GoogleMapsScraper() {
-  const [country, setCountry]     = useState("United States")
-  const [cityState, setCityState] = useState("")
-  const [keyword, setKeyword]     = useState("")
+  const searchParams = useSearchParams()
+  const [country, setCountry]     = useState(() => searchParams.get("country") ?? "United States")
+  const [cityState, setCityState] = useState(() => searchParams.get("location") ?? "")
+  const [keyword, setKeyword]     = useState(() => searchParams.get("keyword") ?? "")
   const [maxResults, setMaxResults] = useState("50")
   const [phoneFilter, setPhoneFilter] = useState("any")
   const [websiteFilter, setWebsiteFilter] = useState("any")
@@ -104,17 +88,14 @@ export default function GoogleMapsScraper() {
   const [creditsLoading, setCreditsLoading] = useState(true)
   const [plan, setPlan] = useState<string>("free")
 
-  // Plan-based limits (mirrors server constants — UI only; server always re-enforces)
   const PLAN_MAX: Record<string, number> = { free: 50, starter: 1000, growth: 2000 }
   const FILTER_PLANS = ["starter", "growth"]
   const planMax    = PLAN_MAX[plan] ?? 50
   const canFilter  = FILTER_PLANS.includes(plan)
 
-  // Max-results options visible to this plan
   const ALL_OPTIONS = [10, 25, 50, 100, 200, 500, 1000, 2000]
   const resultOptions = ALL_OPTIONS.filter((n) => n <= planMax)
 
-  // Load credits + plan on mount
   useEffect(() => {
     async function loadProfile() {
       const supabase = createClient()
@@ -131,7 +112,6 @@ export default function GoogleMapsScraper() {
         const p     = profile.plan ?? "free"
         setCredits({ used, limit, remaining: limit - used })
         setPlan(p)
-        // Clamp existing maxResults to the plan limit
         const pMax = PLAN_MAX[p] ?? 50
         setMaxResults((prev) => String(Math.min(parseInt(prev, 10) || 50, pMax)))
       }
@@ -208,7 +188,6 @@ export default function GoogleMapsScraper() {
 
   const buildCSV = (rows: Lead[]) => {
     const headers = ["Business Name", "Address", "Phone", "Website", "Rating", "Reviews", "Category", "Google Maps"]
-
     const csvRows = rows.map((l) => [
       `"${(l.title || '').replace(/"/g, '""')}"`,
       `"${(l.address || '').replace(/"/g, '""')}"`,
@@ -219,7 +198,6 @@ export default function GoogleMapsScraper() {
       `"${(l.category || '').replace(/"/g, '""')}"`,
       `"${l.mapsUrl || ''}"`,
     ].join(","))
-
     return [headers.join(","), ...csvRows].join("\n")
   }
 
@@ -236,7 +214,6 @@ export default function GoogleMapsScraper() {
     link.click()
     document.body.removeChild(link)
 
-    // Log export + send notification email (both non-blocking)
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -248,11 +225,8 @@ export default function GoogleMapsScraper() {
           lead_count: rows.length,
         })
       }
-    } catch {
-      // intentionally silent
-    }
+    } catch { /* intentionally silent */ }
 
-    // Send export-completed email (fire-and-forget)
     fetch("/api/notifications/send-export", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -280,44 +254,36 @@ export default function GoogleMapsScraper() {
 
   const selectedLeads = leads.filter((_, i) => selectedRows.has(i))
   const canSearch = !isLoading && country && keyword.trim() && credits.remaining > 0
-
   const creditPct = credits.limit > 0 ? Math.min((credits.used / credits.limit) * 100, 100) : 0
   const lowCredits = credits.remaining <= Math.ceil(credits.limit * 0.15) && credits.remaining > 0
   const outOfCredits = credits.remaining === 0
+  const estCost = parseInt(maxResults, 10)
 
   return (
     <div className="space-y-4">
 
-      {/* ── Credits bar ────────────────────────────────────────────────────── */}
+      {/* Credits bar */}
       {!creditsLoading && (
-        <div className={`bg-white border rounded-xl px-4 py-3 flex items-center justify-between gap-4 ${
-          outOfCredits ? "border-red-200 bg-red-50"
-          : lowCredits  ? "border-amber-200 bg-amber-50"
-          : "border-neutral-200"
+        <div className={`border-2 border-[#1A1A1A] rounded-[10px] shadow-brutal px-4 py-3 flex items-center justify-between gap-4 ${
+          outOfCredits ? "bg-[#FF6B5C]/10"
+          : lowCredits  ? "bg-[#FFE45E]"
+          : "bg-[#EFEBE0]"
         }`}>
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <Zap
-              size={14}
-              strokeWidth={2}
-              className={outOfCredits ? "text-red-500" : lowCredits ? "text-amber-500" : "text-blue-600"}
-            />
+            <span className="text-[#1A1A1A]">⚡</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs font-semibold ${
-                  outOfCredits ? "text-red-700" : lowCredits ? "text-amber-700" : "text-neutral-700"
-                }`}>
+                <span className="font-kalam font-bold text-sm text-[#1A1A1A]">
                   {credits.remaining} credits remaining
                 </span>
-                <span className="text-[11px] text-neutral-400">
+                <span className="font-jetbrains text-[10px] text-[#6B6B6B]">
                   ({credits.used} / {credits.limit} used)
                 </span>
               </div>
-              <div className="h-1.5 bg-neutral-200 rounded-full overflow-hidden w-36">
+              <div className="h-1.5 bg-[#1A1A1A]/20 rounded-full overflow-hidden w-32">
                 <div
-                  className={`h-full rounded-full transition-all ${
-                    outOfCredits ? "bg-red-400" : lowCredits ? "bg-amber-400" : "bg-blue-600"
-                  }`}
-                  style={{ width: `${creditPct}%` }}
+                  className="h-full bg-[#1A1A1A] rounded-full transition-all"
+                  style={{ width: `${100 - creditPct}%` }}
                 />
               </div>
             </div>
@@ -325,118 +291,124 @@ export default function GoogleMapsScraper() {
           {(outOfCredits || lowCredits) && (
             <Link
               href="/dashboard/billing"
-              className="flex items-center gap-1 text-xs font-semibold bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
+              className="font-kalam font-bold text-[13px] text-[#F7F4EC] bg-[#1A1A1A] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 btn-press whitespace-nowrap"
             >
-              Upgrade <ArrowRight size={11} strokeWidth={2.5} />
+              Upgrade →
             </Link>
           )}
         </div>
       )}
 
-      {/* ── No-credits gate ─────────────────────────────────────────────────── */}
+      {/* No-credits gate */}
       {(noCredits || outOfCredits) && (
-        <div className="bg-white border border-red-200 rounded-xl p-10 text-center">
-          <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center mx-auto mb-4">
-            <Zap size={22} className="text-red-400" strokeWidth={2} />
+        <div className="bg-[#F7F4EC] border-2 border-[#FF6B5C] rounded-[12px] shadow-brutal p-10 text-center">
+          <div className="w-12 h-12 bg-[#FF6B5C]/10 border-2 border-[#FF6B5C] rounded-[10px] flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">⚡</span>
           </div>
-          <h3 className="text-base font-semibold text-neutral-900 mb-2">No credits remaining</h3>
-          <p className="text-sm text-neutral-400 mb-5 max-w-xs mx-auto leading-relaxed">
-            You've used all your credits. Upgrade your plan to continue finding leads.
+          <h3 className="font-kalam font-bold text-[#1A1A1A] text-lg mb-2">No credits remaining</h3>
+          <p className="font-jetbrains text-[11px] text-[#6B6B6B] mb-5 max-w-xs mx-auto leading-relaxed">
+            You&apos;ve used all your credits. Upgrade your plan to continue finding leads.
           </p>
           <Link
             href="/dashboard/billing"
-            className="inline-flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 font-kalam font-bold text-[#F7F4EC] bg-[#1A1A1A] border-2 border-[#1A1A1A] rounded-[10px] px-6 py-3 text-sm btn-press shadow-brutal"
           >
-            View upgrade plans
-            <ArrowRight size={14} strokeWidth={2.5} />
+            View upgrade plans →
           </Link>
         </div>
       )}
 
-      {/* ── Search card ─────────────────────────────────────────────────────── */}
-      <div className={`bg-white border border-neutral-200 rounded-xl p-6 shadow-sm ${outOfCredits ? "opacity-50 pointer-events-none select-none" : ""}`}>
-        <div className="flex items-center gap-2.5 mb-6">
-          <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-            <Search size={16} className="text-blue-700" strokeWidth={2.5} />
-          </div>
-          <div>
-            <h2 className="text-[0.9375rem] font-semibold text-neutral-900">Local Business Finder</h2>
-            <p className="text-xs text-neutral-400">Search and export verified business leads</p>
-          </div>
-        </div>
+      {/* Search form */}
+      <div className={`bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[14px] shadow-brutal-lg p-6 ${outOfCredits ? "opacity-50 pointer-events-none select-none" : ""}`}>
 
-        {/* Inputs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-              Business keyword <span className="text-blue-600">*</span>
+        {/* Form fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+          {/* Keyword */}
+          <div className="space-y-2">
+            <label className="font-jetbrains text-[10px] font-bold text-[#1A1A1A] uppercase tracking-wider">
+              KEYWORD <span className="text-[#FF6B5C]">*</span>
             </label>
-            <input
-              type="text"
-              placeholder="e.g. dentists, Italian restaurants, gyms"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && canSearch && handleSearch()}
-              className="w-full bg-white border border-neutral-200 rounded-lg px-4 py-2.5 text-sm text-neutral-900 placeholder-neutral-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
-            />
-            <p className="text-[11px] text-neutral-400">Try "Italian restaurants" not just "restaurants" for better results.</p>
+            <div className="flex items-center gap-2 bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[10px] px-4 py-3 focus-within:border-[#1A1A1A] focus-within:shadow-brutal transition-all">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="6"/><path d="M16 16 L21 21"/>
+              </svg>
+              <input
+                type="text"
+                placeholder="dentists"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && canSearch && handleSearch()}
+                className="font-kalam text-sm text-[#1A1A1A] placeholder:text-[#B8B5AA] bg-transparent outline-none flex-1"
+              />
+            </div>
+            <p className="font-jetbrains text-[10px] text-[#B8B5AA]">
+              Try &quot;Italian restaurants&quot; not just &quot;restaurants&quot; for better results.
+            </p>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-              Location <span className="text-blue-600">*</span>
+          {/* Location */}
+          <div className="space-y-2">
+            <label className="font-jetbrains text-[10px] font-bold text-[#1A1A1A] uppercase tracking-wider">
+              LOCATION <span className="text-[#FF6B5C]">*</span>
             </label>
             <div className="flex gap-2">
-              {/* Country dropdown */}
               <select
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                className="w-44 flex-shrink-0 bg-white border border-neutral-200 rounded-lg px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                className="w-40 flex-shrink-0 font-kalam text-sm text-[#1A1A1A] bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[10px] px-3 py-3 outline-none focus:shadow-brutal transition-all"
               >
                 {COUNTRIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
-              {/* City / state text input */}
-              <input
-                type="text"
-                placeholder="e.g. Mumbai, California"
-                value={cityState}
-                onChange={(e) => setCityState(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && canSearch && handleSearch()}
-                className="flex-1 min-w-0 bg-white border border-neutral-200 rounded-lg px-4 py-2.5 text-sm text-neutral-900 placeholder-neutral-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
-              />
+              <div className="flex items-center gap-2 flex-1 bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[10px] px-4 py-3 focus-within:shadow-brutal transition-all">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="8"/><path d="M2 12 L22 12"/>
+                  <path d="M12 2 Q17 7 17 12 Q17 17 12 22"/><path d="M12 2 Q7 7 7 12 Q7 17 12 22"/>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="e.g. Mumbai, California"
+                  value={cityState}
+                  onChange={(e) => setCityState(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && canSearch && handleSearch()}
+                  className="font-kalam text-sm text-[#1A1A1A] placeholder:text-[#B8B5AA] bg-transparent outline-none flex-1"
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 mb-5 pb-5 border-b border-neutral-100">
+        {/* Filters row */}
+        <div className="flex flex-wrap items-center gap-3 pb-5 border-b-2 border-[#EFEBE0] mb-5">
+          {/* Max results */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-neutral-500">Max results:</label>
+            <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider">
+              MAX RESULTS
+            </label>
             <select
               value={maxResults}
               onChange={(e) => setMaxResults(e.target.value)}
-              className="bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-900 focus:outline-none focus:border-blue-500 transition-all"
+              className="font-jetbrains text-[12px] text-[#1A1A1A] bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 outline-none"
             >
               {resultOptions.map((n) => (
                 <option key={n} value={String(n)}>{n}</option>
               ))}
             </select>
-            <span className="text-[11px] text-neutral-400">
+            <span className="font-jetbrains text-[10px] text-[#B8B5AA]">
               max {planMax.toLocaleString()} on {plan} plan
             </span>
           </div>
 
-          {/* Phone + Website filters — paid plans only */}
+          {/* Phone/website filters */}
           {canFilter ? (
             <>
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-neutral-500">Phone:</label>
+                <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider">PHONE</label>
                 <select
                   value={phoneFilter}
                   onChange={(e) => setPhoneFilter(e.target.value)}
-                  className="bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-900 focus:outline-none focus:border-blue-500 transition-all"
+                  className="font-jetbrains text-[12px] text-[#1A1A1A] bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 outline-none"
                 >
                   <option value="any">Any</option>
                   <option value="with">With phone only</option>
@@ -444,11 +416,11 @@ export default function GoogleMapsScraper() {
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-neutral-500">Website:</label>
+                <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider">WEBSITE</label>
                 <select
                   value={websiteFilter}
                   onChange={(e) => setWebsiteFilter(e.target.value)}
-                  className="bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-900 focus:outline-none focus:border-blue-500 transition-all"
+                  className="font-jetbrains text-[12px] text-[#1A1A1A] bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 outline-none"
                 >
                   <option value="any">Any</option>
                   <option value="with">With website only</option>
@@ -459,25 +431,32 @@ export default function GoogleMapsScraper() {
           ) : (
             <Link
               href="/dashboard/billing"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-neutral-200 text-neutral-400 bg-neutral-50 hover:border-blue-300 hover:text-blue-600 transition-all group"
+              className="font-kalam font-bold text-[12px] text-[#6B6B6B] border-2 border-dashed border-[#B8B5AA] rounded-[8px] px-3 py-1.5 hover:border-[#1A1A1A] hover:text-[#1A1A1A] transition-all flex items-center gap-2"
             >
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" className="flex-shrink-0">
-                <rect x="1.5" y="5" width="8" height="6" rx="1" fill="currentColor" opacity=".4"/>
-                <path d="M3 5V3.5a2.5 2.5 0 1 1 5 0V5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-              Phone &amp; website filters
-              <span className="text-[10px] font-semibold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Starter+</span>
+              🔒 Phone &amp; website filters
+              <span className="font-jetbrains text-[10px] font-bold bg-[#FFE45E] text-[#1A1A1A] border border-[#1A1A1A] rounded-[4px] px-1.5 py-0.5">Starter+</span>
             </Link>
           )}
-
         </div>
 
-        {/* Submit */}
-        <div className="flex items-center gap-3">
+        {/* Estimated cost */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="font-jetbrains text-[11px] text-[#6B6B6B]">
+              Est. cost:{" "}
+              <span className="font-bold text-[#1A1A1A]">{estCost} credits</span>
+              {credits.remaining < estCost && credits.remaining > 0 && (
+                <span className="text-[#FF6B5C] ml-2">
+                  (only {credits.remaining} available)
+                </span>
+              )}
+            </div>
+          </div>
+
           <button
             onClick={handleSearch}
             disabled={!canSearch}
-            className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-lg transition-colors text-sm"
+            className="font-kalam font-bold text-[#F7F4EC] bg-[#1A1A1A] border-2 border-[#1A1A1A] rounded-[10px] px-7 py-3 text-sm inline-flex items-center gap-2 btn-press shadow-brutal disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-brutal"
           >
             {isLoading ? (
               <>
@@ -485,38 +464,34 @@ export default function GoogleMapsScraper() {
                 Finding businesses…
               </>
             ) : (
-              <>
-                <MagnifyingGlass weight="bold" size={15} />
-                Find Leads
-              </>
+              "Search leads →"
             )}
           </button>
-
         </div>
       </div>
 
-{/* ── Error ────────────────────────────────────────────────────────────── */}
+      {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 flex items-start gap-3 text-sm">
-          <AlertCircle size={15} className="flex-shrink-0 mt-0.5 text-red-500" strokeWidth={2} />
-          <span>{error}</span>
+        <div className="bg-[#FF6B5C]/10 border-2 border-[#FF6B5C] rounded-[10px] px-4 py-3 flex items-start gap-3 font-kalam text-sm text-[#FF6B5C]">
+          <span className="flex-shrink-0 mt-0.5">⚠</span>
+          {error}
         </div>
       )}
 
-      {/* ── Skeleton loader ──────────────────────────────────────────────────── */}
+      {/* Skeleton */}
       {isLoading && (
-        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-neutral-100 flex items-center gap-2">
-            <div className="h-3.5 w-32 bg-neutral-100 rounded animate-pulse" />
-            <div className="h-3.5 w-24 bg-neutral-100 rounded animate-pulse ml-2" />
+        <div className="bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[12px] overflow-hidden shadow-brutal">
+          <div className="px-5 py-4 border-b-2 border-[#1A1A1A] bg-[#EFEBE0] flex items-center gap-3">
+            <Loader2 size={14} className="animate-spin text-[#6B6B6B]" />
+            <span className="font-kalam text-sm text-[#6B6B6B]">Searching businesses…</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-neutral-100 bg-neutral-50">
-                  {["Business Name", "Phone", "Rating", "Website", "Address", "Maps"].map((h) => (
+                <tr className="border-b-2 border-[#EFEBE0] bg-[#EFEBE0]">
+                  {["Business Name", "Phone", "Rating", "Website", "Category", "Maps"].map((h) => (
                     <th key={h} className="px-4 py-3 text-left">
-                      <div className="h-2.5 w-16 bg-neutral-200 rounded" />
+                      <div className="h-2.5 w-16 bg-[#1A1A1A]/10 rounded animate-pulse" />
                     </th>
                   ))}
                 </tr>
@@ -531,20 +506,20 @@ export default function GoogleMapsScraper() {
         </div>
       )}
 
-      {/* ── Results table ────────────────────────────────────────────────────── */}
+      {/* Results */}
       {!isLoading && leads.length > 0 && (
-        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[12px] overflow-hidden shadow-brutal">
           {/* Results header */}
-          <div className="px-5 py-4 border-b border-neutral-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="px-5 py-4 border-b-2 border-[#1A1A1A] bg-[#EFEBE0] flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-sm font-semibold text-neutral-900">
+                <div className="w-2 h-2 rounded-full bg-[#6FCF97]" />
+                <span className="font-kalam font-bold text-sm text-[#1A1A1A]">
                   {leads.length} business{leads.length !== 1 ? "es" : ""} found
                 </span>
               </div>
               {selectedRows.size > 0 && (
-                <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full font-medium">
+                <span className="font-jetbrains text-[11px] font-bold bg-[#FFE45E] text-[#1A1A1A] border-2 border-[#1A1A1A] px-2.5 py-0.5 rounded-[6px]">
                   {selectedRows.size} selected
                 </span>
               )}
@@ -554,18 +529,16 @@ export default function GoogleMapsScraper() {
               {selectedRows.size > 0 && (
                 <button
                   onClick={() => exportRows(selectedLeads, "-selected")}
-                  className="flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all"
+                  className="font-kalam font-bold text-[12px] text-[#1A1A1A] bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 btn-press shadow-brutal flex items-center gap-1.5"
                 >
-                  <Export weight="bold" size={13} />
-                  Export selected ({selectedRows.size})
+                  ↓ Export selected ({selectedRows.size})
                 </button>
               )}
               <button
                 onClick={() => exportRows(leads)}
-                className="flex items-center gap-1.5 bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-700 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all"
+                className="font-kalam font-bold text-[12px] text-[#F7F4EC] bg-[#1A1A1A] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 btn-press shadow-brutal flex items-center gap-1.5"
               >
-                <Download size={13} strokeWidth={2.5} />
-                Export all CSV
+                ↓ Export all CSV
               </button>
             </div>
           </div>
@@ -574,19 +547,19 @@ export default function GoogleMapsScraper() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-neutral-100 bg-neutral-50">
+                <tr className="border-b-2 border-[#EFEBE0] bg-[#F7F4EC]">
                   <th className="px-4 py-3 text-left">
                     <input
                       type="checkbox"
                       checked={selectedRows.size === leads.length && leads.length > 0}
                       onChange={toggleAll}
-                      className="rounded accent-blue-700"
+                      className="rounded border-2 border-[#1A1A1A] accent-[#1A1A1A]"
                     />
                   </th>
                   {["Business Name", "Category", "Phone", "Rating", "Website", "Maps"].map((h) => (
                     <th
                       key={h}
-                      className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-400 uppercase tracking-wider whitespace-nowrap"
+                      className="px-4 py-3 text-left font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider whitespace-nowrap"
                     >
                       {h}
                     </th>
@@ -597,101 +570,90 @@ export default function GoogleMapsScraper() {
                 {leads.map((lead, i) => (
                   <tr
                     key={i}
-                    className={`border-b border-neutral-50 transition-colors ${
-                      selectedRows.has(i) ? "bg-blue-50" : "hover:bg-neutral-50"
+                    className={`border-b border-[#EFEBE0] transition-colors cursor-pointer ${
+                      selectedRows.has(i) ? "bg-[#FFE45E]/20" : "hover:bg-[#EFEBE0]"
                     }`}
+                    onClick={() => toggleRow(i)}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedRows.has(i)}
                         onChange={() => toggleRow(i)}
-                        className="rounded accent-blue-700"
+                        className="rounded border-2 border-[#1A1A1A] accent-[#1A1A1A]"
                       />
                     </td>
 
-                    {/* Business name + address */}
                     <td className="px-4 py-3">
-                      <div className="font-medium text-neutral-900 max-w-[200px] truncate text-[0.8125rem]">
+                      <div className="font-kalam font-bold text-[#1A1A1A] max-w-[180px] truncate text-[0.8125rem]">
                         {lead.title || "N/A"}
                       </div>
-                      <div className="text-[11px] text-neutral-400 max-w-[200px] truncate mt-0.5">
+                      <div className="font-jetbrains text-[10px] text-[#B8B5AA] max-w-[180px] truncate mt-0.5">
                         {lead.address}
                       </div>
                     </td>
 
-                    {/* Category */}
                     <td className="px-4 py-3">
                       {lead.category ? (
-                        <span className="text-xs bg-neutral-100 border border-neutral-200 text-neutral-500 px-2 py-0.5 rounded-md truncate max-w-[110px] block">
+                        <span className="font-jetbrains text-[10px] bg-[#EFEBE0] border border-[#1A1A1A] text-[#3A3A3A] px-2 py-0.5 rounded-[6px] truncate max-w-[110px] block">
                           {lead.category}
                         </span>
                       ) : (
-                        <span className="text-neutral-300 text-xs">—</span>
+                        <span className="text-[#B8B5AA] text-xs">—</span>
                       )}
                     </td>
 
-                    {/* Phone */}
                     <td className="px-4 py-3 whitespace-nowrap">
                       {lead.phone ? (
-                        <div className="flex items-center gap-1.5 text-xs text-neutral-700">
-                          <Phone weight="fill" size={11} className="text-neutral-400 flex-shrink-0" />
-                          {lead.phone}
-                        </div>
+                        <span className="font-jetbrains text-[11px] text-[#3A3A3A]">{lead.phone}</span>
                       ) : (
-                        <span className="text-neutral-300 text-xs">—</span>
+                        <span className="text-[#B8B5AA] text-xs">—</span>
                       )}
                     </td>
 
-                    {/* Rating */}
                     <td className="px-4 py-3 whitespace-nowrap">
                       {lead.rating ? (
                         <div className="flex items-center gap-1">
-                          <Star weight="fill" size={11} className="text-amber-400" />
-                          <span className="text-xs font-semibold text-neutral-800">{lead.rating}</span>
+                          <span className="text-[#FFE45E]">★</span>
+                          <span className="font-kalam font-bold text-[#1A1A1A] text-xs">{lead.rating}</span>
                           {lead.reviewsCount && (
-                            <span className="text-[11px] text-neutral-400">({lead.reviewsCount})</span>
+                            <span className="font-jetbrains text-[10px] text-[#B8B5AA]">({lead.reviewsCount})</span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-neutral-300 text-xs">—</span>
+                        <span className="text-[#B8B5AA] text-xs">—</span>
                       )}
                     </td>
 
-                    {/* Website */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       {lead.website ? (
                         <a
                           href={lead.website}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs font-medium transition-colors"
+                          className="font-kalam font-bold text-[12px] text-[#1A1A1A] bg-[#EFEBE0] border border-[#1A1A1A] rounded-[6px] px-2 py-0.5 hover:bg-[#FFE45E] transition-colors inline-flex items-center gap-1"
                         >
-                          <Globe weight="fill" size={11} />
-                          Visit
+                          Visit <ExternalLink size={10} />
                         </a>
                       ) : (
-                        <span className="text-neutral-300 text-xs">—</span>
+                        <span className="text-[#B8B5AA] text-xs">—</span>
                       )}
                     </td>
 
-                    {/* Maps */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       {lead.mapsUrl ? (
                         <a
                           href={lead.mapsUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 text-xs font-medium transition-colors"
+                          className="font-kalam font-bold text-[12px] text-[#1A1A1A] bg-[#6FCF97]/20 border border-[#1A1A1A] rounded-[6px] px-2 py-0.5 hover:bg-[#6FCF97]/40 transition-colors inline-flex items-center gap-1"
                         >
-                          <MapPin weight="fill" size={11} />
-                          Maps
+                          Maps <ExternalLink size={10} />
                         </a>
                       ) : (
-                        <span className="text-neutral-300 text-xs">—</span>
+                        <span className="text-[#B8B5AA] text-xs">—</span>
                       )}
                     </td>
-
                   </tr>
                 ))}
               </tbody>
@@ -699,30 +661,32 @@ export default function GoogleMapsScraper() {
           </div>
 
           {/* Table footer */}
-          <div className="px-5 py-3 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
-            <span className="text-xs text-neutral-400">
+          <div className="px-5 py-3 bg-[#EFEBE0] border-t-2 border-[#1A1A1A] flex items-center justify-between">
+            <span className="font-jetbrains text-[11px] text-[#6B6B6B]">
               {leads.length} result{leads.length !== 1 ? "s" : ""}
               {selectedRows.size > 0 && ` · ${selectedRows.size} selected`}
             </span>
             <button
               onClick={() => exportRows(leads)}
-              className="flex items-center gap-1.5 text-xs font-medium text-blue-700 hover:text-blue-800 transition-colors"
+              className="font-kalam font-bold text-[12px] text-[#1A1A1A] hover:opacity-70 transition-opacity flex items-center gap-1.5"
             >
-              <DownloadSimple weight="bold" size={12} />
-              Download CSV
+              ↓ Download CSV
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Empty state ──────────────────────────────────────────────────────── */}
+      {/* Empty state (after search with no results) */}
       {!isLoading && leads.length === 0 && !error && keyword && (
-        <div className="bg-white border border-neutral-200 rounded-xl p-14 text-center shadow-sm">
-          <div className="w-11 h-11 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center mx-auto mb-3">
-            <Buildings size={20} className="text-neutral-300" />
+        <div className="bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[12px] shadow-brutal p-14 text-center">
+          <div className="w-11 h-11 bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[10px] flex items-center justify-center mx-auto mb-3">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B8B5AA" strokeWidth="2" strokeLinecap="round">
+              <rect x="2" y="7" width="20" height="14" rx="2"/>
+              <path d="M16 21 L16 5 Q16 3 14 3 L10 3 Q8 3 8 5 L8 21"/>
+            </svg>
           </div>
-          <p className="text-sm font-semibold text-neutral-700 mb-1">No results yet</p>
-          <p className="text-xs text-neutral-400">Enter a keyword and location above, then click "Find Leads".</p>
+          <p className="font-kalam font-bold text-[#3A3A3A] text-sm mb-1">No results yet</p>
+          <p className="font-jetbrains text-[11px] text-[#B8B5AA]">Enter a keyword and location above, then click &quot;Search leads&quot;.</p>
         </div>
       )}
     </div>

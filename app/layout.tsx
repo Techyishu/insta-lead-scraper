@@ -109,12 +109,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${bricolage.variable} ${kalam.variable} ${jetbrainsMono.variable}`}>
-      <body className="antialiased">
-        {children}
-        <Analytics />
-        <CookieBanner />
-
-        {/* Meta Pixel */}
+      <head>
+        {/* Meta Pixel Code */}
         <Script id="meta-pixel" strategy="afterInteractive">
           {`
             !function(f,b,e,v,n,t,s)
@@ -139,6 +135,12 @@ export default function RootLayout({
             alt=""
           />
         </noscript>
+        {/* End Meta Pixel Code */}
+      </head>
+      <body className="antialiased">
+        {children}
+        <Analytics />
+        <CookieBanner />
       </body>
     </html>
   )

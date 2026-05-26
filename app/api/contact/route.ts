@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resend } from '@/lib/resend'
+import { sendTelegramMessage, formatContactMessage } from '@/lib/telegram'
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,6 +9,9 @@ export async function POST(request: NextRequest) {
     if (!name || !email || !subject || !message) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
     }
+
+    // Fire Telegram notification in parallel — non-blocking
+    sendTelegramMessage(formatContactMessage({ name, email, subject, message })).catch(() => {})
 
     await resend.emails.send({
       from:     process.env.RESEND_FROM_EMAIL ?? 'LeadMapper <noreply@leadmapper.pro>',

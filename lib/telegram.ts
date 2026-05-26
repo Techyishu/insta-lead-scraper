@@ -67,6 +67,29 @@ export function formatSignupMessage(opts: {
   ].join('\n')
 }
 
+/** Formats a contact-form notification message */
+export function formatContactMessage(opts: {
+  name:    string
+  email:   string
+  subject: string
+  message: string
+}): string {
+  const { name, email, subject, message } = opts
+
+  const preview = message.length > 300 ? message.slice(0, 300) + '…' : message
+
+  return [
+    `📬 <b>New Contact Form Submission</b>`,
+    ``,
+    `👤 <b>Name:</b>    ${escapeHtml(name)}`,
+    `📧 <b>Email:</b>   ${escapeHtml(email)}`,
+    `📌 <b>Subject:</b> ${escapeHtml(subject)}`,
+    ``,
+    `💬 <b>Message:</b>`,
+    escapeHtml(preview),
+  ].join('\n')
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function escapeHtml(str: string): string {

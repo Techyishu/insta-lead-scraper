@@ -147,8 +147,8 @@ export async function POST(request: NextRequest) {
     // searchStringsArray = keyword only; locationQuery = location separately
     // website field: actor-native filter (applied before counting results)
     const websiteParam =
-      effectiveWebsite === 'with'    ? 'onlyPlacesWithWebsite'    :
-      effectiveWebsite === 'without' ? 'onlyPlacesWithoutWebsite' :
+      effectiveWebsite === 'with'    ? 'withWebsite'    :
+      effectiveWebsite === 'without' ? 'withoutWebsite' :
       'allPlaces'
 
     const apifyInput: Record<string, unknown> = {

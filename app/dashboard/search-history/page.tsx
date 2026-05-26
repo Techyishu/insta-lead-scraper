@@ -204,10 +204,10 @@ export default function SearchHistoryPage() {
       )}
 
       {/* Filter bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5">
+      <div className="flex flex-col gap-3 mb-5">
         {/* Search input */}
-        <div className="flex items-center gap-2 bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[10px] px-4 py-2.5 flex-1 min-w-[200px]">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" strokeWidth="2" strokeLinecap="round">
+        <div className="flex items-center gap-2 bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[10px] px-4 py-2.5 w-full">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" strokeWidth="2" strokeLinecap="round" className="flex-shrink-0">
             <circle cx="11" cy="11" r="6"/><path d="M16 16 L21 21"/>
           </svg>
           <input
@@ -215,7 +215,7 @@ export default function SearchHistoryPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Filter by keyword or city…"
-            className="font-kalam text-sm text-[#1A1A1A] placeholder:text-[#B8B5AA] bg-transparent outline-none flex-1"
+            className="font-kalam text-sm text-[#1A1A1A] placeholder:text-[#B8B5AA] bg-transparent outline-none flex-1 min-w-0"
           />
         </div>
 
@@ -265,36 +265,36 @@ export default function SearchHistoryPage() {
             className="bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[12px] overflow-hidden shadow-brutal"
           >
             {/* Row header */}
-            <div className="px-5 py-4 flex items-center justify-between gap-4">
+            <div className="px-4 sm:px-5 py-4 flex items-center justify-between gap-3">
               <button
                 onClick={() => toggleSearch(s.id)}
-                className="flex items-start gap-4 min-w-0 flex-1 text-left"
+                className="flex items-start gap-3 min-w-0 flex-1 text-left"
               >
-                <div className="w-9 h-9 bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[8px] flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2.5" strokeLinecap="round">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[8px] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2.5" strokeLinecap="round">
                     <circle cx="11" cy="11" r="6"/><path d="M16 16 L21 21"/>
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="font-kalam font-bold text-[#1A1A1A] text-sm capitalize">{s.keyword}</span>
-                    <span className="text-[#B8B5AA]">·</span>
-                    <span className="font-jetbrains text-[11px] text-[#6B6B6B] flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                    <span className="font-kalam font-bold text-[#1A1A1A] text-sm capitalize truncate max-w-[120px] sm:max-w-none">{s.keyword}</span>
+                    <span className="text-[#B8B5AA] hidden sm:inline">·</span>
+                    <span className="font-jetbrains text-[10px] sm:text-[11px] text-[#6B6B6B] truncate max-w-[130px] sm:max-w-none">
                       📍 {s.location}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-jetbrains text-[10px] text-[#B8B5AA]">
                       📦 {s.result_count} lead{s.result_count !== 1 ? "s" : ""}
                     </span>
-                    <span className="font-jetbrains text-[10px] text-[#B8B5AA]">
+                    <span className="font-jetbrains text-[10px] text-[#B8B5AA] hidden sm:inline">
                       🕐 {formatDate(s.created_at)}
                     </span>
                   </div>
                 </div>
               </button>
 
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 {s.leadsLoaded && s.leads && s.leads.length > 0 && (
                   <button
                     onClick={(e) => { e.stopPropagation(); downloadCSV(s.leads!, s.keyword, s.location) }}

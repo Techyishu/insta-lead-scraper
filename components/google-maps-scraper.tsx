@@ -264,7 +264,7 @@ export default function GoogleMapsScraper() {
 
       {/* Credits bar */}
       {!creditsLoading && (
-        <div className={`border-2 border-[#1A1A1A] rounded-[10px] shadow-brutal px-4 py-3 flex items-center justify-between gap-4 ${
+        <div className={`border-2 border-[#1A1A1A] rounded-[10px] shadow-brutal px-4 py-3 flex flex-wrap items-center justify-between gap-3 ${
           outOfCredits ? "bg-[#FF6B5C]/10"
           : lowCredits  ? "bg-[#FFE45E]"
           : "bg-[#EFEBE0]"
@@ -272,15 +272,15 @@ export default function GoogleMapsScraper() {
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <span className="text-[#1A1A1A]">⚡</span>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-kalam font-bold text-sm text-[#1A1A1A]">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1">
+                <span className="font-kalam font-bold text-sm text-[#1A1A1A] whitespace-nowrap">
                   {credits.remaining} credits remaining
                 </span>
-                <span className="font-jetbrains text-[10px] text-[#6B6B6B]">
+                <span className="font-jetbrains text-[10px] text-[#6B6B6B] hidden xs:inline whitespace-nowrap">
                   ({credits.used} / {credits.limit} used)
                 </span>
               </div>
-              <div className="h-1.5 bg-[#1A1A1A]/20 rounded-full overflow-hidden w-32">
+              <div className="h-1.5 bg-[#1A1A1A]/20 rounded-full overflow-hidden max-w-[128px]">
                 <div
                   className="h-full bg-[#1A1A1A] rounded-full transition-all"
                   style={{ width: `${100 - creditPct}%` }}
@@ -291,7 +291,7 @@ export default function GoogleMapsScraper() {
           {(outOfCredits || lowCredits) && (
             <Link
               href="/dashboard/billing"
-              className="font-kalam font-bold text-[13px] text-[#F7F4EC] bg-[#1A1A1A] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 btn-press whitespace-nowrap"
+              className="font-kalam font-bold text-[13px] text-[#F7F4EC] bg-[#1A1A1A] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 btn-press whitespace-nowrap flex-shrink-0"
             >
               Upgrade →
             </Link>
@@ -351,11 +351,11 @@ export default function GoogleMapsScraper() {
             <label className="font-jetbrains text-[10px] font-bold text-[#1A1A1A] uppercase tracking-wider">
               LOCATION <span className="text-[#FF6B5C]">*</span>
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <select
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                className="w-40 flex-shrink-0 font-kalam text-sm text-[#1A1A1A] bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[10px] px-3 py-3 outline-none focus:shadow-brutal transition-all"
+                className="w-full sm:w-40 sm:flex-shrink-0 font-kalam text-sm text-[#1A1A1A] bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[10px] px-3 py-3 outline-none focus:shadow-brutal transition-all"
               >
                 {COUNTRIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
@@ -372,7 +372,7 @@ export default function GoogleMapsScraper() {
                   value={cityState}
                   onChange={(e) => setCityState(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && canSearch && handleSearch()}
-                  className="font-kalam text-sm text-[#1A1A1A] placeholder:text-[#B8B5AA] bg-transparent outline-none flex-1"
+                  className="font-kalam text-sm text-[#1A1A1A] placeholder:text-[#B8B5AA] bg-transparent outline-none flex-1 min-w-0"
                 />
               </div>
             </div>
@@ -380,10 +380,10 @@ export default function GoogleMapsScraper() {
         </div>
 
         {/* Filters row */}
-        <div className="flex flex-wrap items-center gap-3 pb-5 border-b-2 border-[#EFEBE0] mb-5">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 pb-5 border-b-2 border-[#EFEBE0] mb-5">
           {/* Max results */}
-          <div className="flex items-center gap-2">
-            <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider">
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider whitespace-nowrap">
               MAX RESULTS
             </label>
             <select
@@ -395,7 +395,7 @@ export default function GoogleMapsScraper() {
                 <option key={n} value={String(n)}>{n}</option>
               ))}
             </select>
-            <span className="font-jetbrains text-[10px] text-[#B8B5AA]">
+            <span className="font-jetbrains text-[10px] text-[#B8B5AA] whitespace-nowrap">
               max {planMax.toLocaleString()} on {plan} plan
             </span>
           </div>
@@ -404,11 +404,11 @@ export default function GoogleMapsScraper() {
           {canFilter ? (
             <>
               <div className="flex items-center gap-2">
-                <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider">PHONE</label>
+                <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider whitespace-nowrap">PHONE</label>
                 <select
                   value={phoneFilter}
                   onChange={(e) => setPhoneFilter(e.target.value)}
-                  className="font-jetbrains text-[12px] text-[#1A1A1A] bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 outline-none"
+                  className="flex-1 sm:flex-none font-jetbrains text-[12px] text-[#1A1A1A] bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 outline-none"
                 >
                   <option value="any">Any</option>
                   <option value="with">With phone only</option>
@@ -416,11 +416,11 @@ export default function GoogleMapsScraper() {
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider">WEBSITE</label>
+                <label className="font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider whitespace-nowrap">WEBSITE</label>
                 <select
                   value={websiteFilter}
                   onChange={(e) => setWebsiteFilter(e.target.value)}
-                  className="font-jetbrains text-[12px] text-[#1A1A1A] bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 outline-none"
+                  className="flex-1 sm:flex-none font-jetbrains text-[12px] text-[#1A1A1A] bg-[#EFEBE0] border-2 border-[#1A1A1A] rounded-[8px] px-3 py-1.5 outline-none"
                 >
                   <option value="any">Any</option>
                   <option value="with">With website only</option>
@@ -431,7 +431,7 @@ export default function GoogleMapsScraper() {
           ) : (
             <Link
               href="/dashboard/billing"
-              className="font-kalam font-bold text-[12px] text-[#6B6B6B] border-2 border-dashed border-[#B8B5AA] rounded-[8px] px-3 py-1.5 hover:border-[#1A1A1A] hover:text-[#1A1A1A] transition-all flex items-center gap-2"
+              className="font-kalam font-bold text-[12px] text-[#6B6B6B] border-2 border-dashed border-[#B8B5AA] rounded-[8px] px-3 py-1.5 hover:border-[#1A1A1A] hover:text-[#1A1A1A] transition-all flex items-center gap-2 self-start"
             >
               🔒 Phone &amp; website filters
               <span className="font-jetbrains text-[10px] font-bold bg-[#FFE45E] text-[#1A1A1A] border border-[#1A1A1A] rounded-[4px] px-1.5 py-0.5">Starter+</span>
@@ -440,23 +440,21 @@ export default function GoogleMapsScraper() {
         </div>
 
         {/* Estimated cost */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="font-jetbrains text-[11px] text-[#6B6B6B]">
-              Est. cost:{" "}
-              <span className="font-bold text-[#1A1A1A]">{estCost} credits</span>
-              {credits.remaining < estCost && credits.remaining > 0 && (
-                <span className="text-[#FF6B5C] ml-2">
-                  (only {credits.remaining} available)
-                </span>
-              )}
-            </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="font-jetbrains text-[11px] text-[#6B6B6B]">
+            Est. cost:{" "}
+            <span className="font-bold text-[#1A1A1A]">{estCost} credits</span>
+            {credits.remaining < estCost && credits.remaining > 0 && (
+              <span className="text-[#FF6B5C] ml-2">
+                (only {credits.remaining} available)
+              </span>
+            )}
           </div>
 
           <button
             onClick={handleSearch}
             disabled={!canSearch}
-            className="font-kalam font-bold text-[#F7F4EC] bg-[#1A1A1A] border-2 border-[#1A1A1A] rounded-[10px] px-7 py-3 text-sm inline-flex items-center gap-2 btn-press shadow-brutal disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-brutal"
+            className="w-full sm:w-auto font-kalam font-bold text-[#F7F4EC] bg-[#1A1A1A] border-2 border-[#1A1A1A] rounded-[10px] px-7 py-3 text-sm inline-flex items-center justify-center gap-2 btn-press shadow-brutal disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-brutal"
           >
             {isLoading ? (
               <>

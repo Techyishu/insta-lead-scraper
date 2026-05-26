@@ -21,6 +21,6 @@ export const PRODUCT_ID_TO_PLAN: Record<string, string> = {
 
 // What to set in user_profiles when a plan activates / renews
 export const PLAN_CONFIGS: Record<string, { credits_limit: number }> = {
-  starter: { credits_limit: 5_000  },
-  growth:  { credits_limit: 10_000 },
+  starter: { credits_limit: 2_500  },
+  growth:  { credits_limit: 5_000  },
 }

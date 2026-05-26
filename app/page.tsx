@@ -41,14 +41,14 @@ const webApplicationSchema = {
       name: 'Starter Plan',
       price: '49',
       priceCurrency: 'USD',
-      description: '5,000 credits/month, CSV export, email support',
+      description: '2,500 credits/month, CSV export, email support',
     },
     {
       '@type': 'Offer',
       name: 'Growth Plan',
       price: '89',
       priceCurrency: 'USD',
-      description: '10,000 credits/month, bulk processing, priority support',
+      description: '5,000 credits/month, bulk processing, priority support',
     },
   ],
 }

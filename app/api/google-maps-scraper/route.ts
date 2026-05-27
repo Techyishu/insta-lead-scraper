@@ -182,8 +182,10 @@ export async function POST(request: NextRequest) {
       scrapePlaceDetailPage:           false,
       scrapeReviewsPersonalData:       false,
       scrapeTableReservationProvider:  false,
-      maximumLeadsEnrichmentRecords:   0,
-      verifyLeadsEnrichmentEmails:     false,
+      // Leads Enrichment add-on: looks up emails from Apify's database.
+      // Set to effectiveMax when enrichment is on so all results are enriched.
+      maximumLeadsEnrichmentRecords:   effectiveEnrich ? effectiveMax : 0,
+      verifyLeadsEnrichmentEmails:     effectiveEnrich,
     }
 
     console.log(

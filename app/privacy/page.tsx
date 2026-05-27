@@ -81,9 +81,9 @@ export default function PrivacyPage() {
 
             <div className="mt-4 bg-[#FFE45E] border-2 border-[#1A1A1A] rounded-[10px] shadow-brutal p-3">
               <p className="font-jetbrains text-[10px] font-bold text-[#1A1A1A] uppercase tracking-wider mb-1">Privacy questions?</p>
-              <Link href="/contact" className="font-kalam font-bold text-[12px] text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">
-                Contact us →
-              </Link>
+              <a href="mailto:shashanksingh67567@gmail.com" className="font-kalam font-bold text-[12px] text-[#1A1A1A] underline underline-offset-2 hover:opacity-70 break-all">
+                shashanksingh67567@gmail.com
+              </a>
             </div>
           </div>
         </aside>
@@ -99,14 +99,14 @@ export default function PrivacyPage() {
             <p className="font-jetbrains text-[12px] text-[#6B6B6B]">Last updated: {lastUpdated}</p>
           </div>
 
-          {/* Mobile contact callout */}
+          {/* Mobile email callout */}
           <div className="lg:hidden bg-[#FFE45E] border-2 border-[#1A1A1A] rounded-[10px] shadow-brutal px-4 py-3 flex items-center gap-3 mb-6">
             <span className="text-xl">✉️</span>
             <p className="font-kalam text-sm text-[#1A1A1A]">
               Questions?{" "}
-              <Link href="/contact" className="font-bold underline underline-offset-2">
-                Contact us →
-              </Link>
+              <a href="mailto:shashanksingh67567@gmail.com" className="font-bold underline underline-offset-2">
+                shashanksingh67567@gmail.com
+              </a>
             </p>
           </div>
 
@@ -173,8 +173,10 @@ export default function PrivacyPage() {
             <div className="border-t-2 border-[#EFEBE0]" />
 
             <Section num={5} title="Data Retention">
-              We retain your account data for as long as your account is active. Search logs are retained for 90 days. Billing records are retained for 7 years as required by financial regulations. You may request earlier deletion via our{" "}
-              <Link href="/contact" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">Contact page</Link>.
+              We retain your account data for as long as your account is active. Search logs are retained for 90 days. Billing records are retained for 7 years as required by financial regulations. You may request earlier deletion by contacting us at{" "}
+              <a href="mailto:shashanksingh67567@gmail.com" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">
+                shashanksingh67567@gmail.com
+              </a>.
             </Section>
 
             <div className="border-t-2 border-[#EFEBE0]" />
@@ -193,8 +195,10 @@ export default function PrivacyPage() {
                   </li>
                 ))}
               </ul>
-              <p className="mt-2">To report a security issue, contact us immediately via our{" "}
-                <Link href="/contact" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">Contact page</Link>.
+              <p className="mt-2">To report a security issue, email us immediately at{" "}
+                <a href="mailto:shashanksingh67567@gmail.com" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">
+                  shashanksingh67567@gmail.com
+                </a>.
               </p>
             </Section>
 
@@ -217,7 +221,10 @@ export default function PrivacyPage() {
                   </li>
                 ))}
               </ul>
-              <p className="mt-2">To exercise any of these rights, use our{" "}
+              <p className="mt-2">To exercise any of these rights, contact us at{" "}
+                <a href="mailto:shashanksingh67567@gmail.com" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">
+                  shashanksingh67567@gmail.com
+                </a>{" "}or use our{" "}
                 <Link href="/contact" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">Contact page</Link>.
               </p>
             </Section>
@@ -231,8 +238,10 @@ export default function PrivacyPage() {
             <div className="border-t-2 border-[#EFEBE0]" />
 
             <Section num={9} title="Data Security">
-              We implement industry-standard security measures including HTTPS encryption, hashed passwords, and role-based access controls. However, no system is 100% secure. Please report any vulnerabilities via our{" "}
-              <Link href="/contact" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">Contact page</Link>.
+              We implement industry-standard security measures including HTTPS encryption, hashed passwords, and role-based access controls. However, no system is 100% secure. Please report any vulnerabilities to{" "}
+              <a href="mailto:shashanksingh67567@gmail.com" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">
+                shashanksingh67567@gmail.com
+              </a>.
             </Section>
 
             <div className="border-t-2 border-[#EFEBE0]" />
@@ -252,11 +261,17 @@ export default function PrivacyPage() {
             <Section num={12} title="Contact & Grievance Officer">
               <p>For privacy-related questions or grievances (as required under DPDPA 2023):</p>
               <div className="bg-[#FFE45E] border-2 border-[#1A1A1A] rounded-[10px] shadow-brutal px-4 py-3 mt-2 space-y-1">
-                <p><strong className="text-[#1A1A1A]">Contact:</strong>{" "}
-                  <Link href="/contact" className="text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">Contact page</Link>
+                <p><strong className="text-[#1A1A1A]">Email:</strong>{" "}
+                  <a href="mailto:shashanksingh67567@gmail.com" className="text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">
+                    shashanksingh67567@gmail.com
+                  </a>
                 </p>
                 <p><strong className="text-[#1A1A1A]">Response time:</strong> Within 72 hours for data requests, 24 hours for urgent security matters.</p>
               </div>
+              <p className="mt-3">You may also use our{" "}
+                <Link href="/contact" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">Contact page</Link>{" "}
+                to reach us.
+              </p>
             </Section>
           </div>
 

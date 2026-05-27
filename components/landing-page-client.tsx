@@ -354,7 +354,7 @@ function Hero({ persona }: { persona: Persona }) {
             </p>
 
             {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-8">
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <Link href="/signup" className={btnPrimaryLg + " justify-center sm:justify-start"}>
                 Get 50 free leads →
               </Link>
@@ -362,6 +362,12 @@ function Hero({ persona }: { persona: Persona }) {
                 View pricing →
               </a>
             </div>
+
+            {/* Google Sign-In notice */}
+            <p className="font-jetbrains text-[11px] text-[#6B6B6B] mb-8 leading-relaxed">
+              Sign up with email or Google. If you use Google Sign-In, we only access your <strong className="text-[#3A3A3A]">name and email</strong> to create your account — nothing else.{" "}
+              <Link href="/privacy" className="underline underline-offset-2 hover:text-[#1A1A1A] transition-colors">Privacy Policy</Link>
+            </p>
 
             {/* Yellow stat box */}
             <div className="bg-[#FFE45E] border-2 border-[#1A1A1A] rounded-organic-lg shadow-brutal p-5 mb-6">

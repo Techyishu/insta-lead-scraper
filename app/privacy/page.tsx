@@ -120,6 +120,7 @@ export default function PrivacyPage() {
 
             <Section num={2} title="Information We Collect">
               <p><strong className="text-[#1A1A1A]">Account Information:</strong> When you register, we collect your name, email address, and password (stored as a secure hash).</p>
+              <p><strong className="text-[#1A1A1A]">Google Sign-In:</strong> If you choose to sign in with Google, we receive your name and email address from Google solely to create and authenticate your LeadMapper account. We do not access your Google Drive, Gmail, contacts, or any other Google data. You can revoke this access at any time from your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">Google Account settings</a>.</p>
               <p><strong className="text-[#1A1A1A]">Usage Data:</strong> We collect information about how you use the Service, including search queries, export activity, pages visited, and features used.</p>
               <p><strong className="text-[#1A1A1A]">Payment Information:</strong> Payment processing is handled by DodoPayments. We do not store full card numbers. We receive and retain billing address and transaction history for invoicing.</p>
               <p><strong className="text-[#1A1A1A]">Business Lead Data:</strong> When you run searches, we process your query to retrieve public business data from third-party sources (Google Maps via Apify). This data is logged to track credit usage.</p>
@@ -154,6 +155,7 @@ export default function PrivacyPage() {
               <div className="grid sm:grid-cols-2 gap-2 mt-2">
                 {[
                   { name: "Supabase",       desc: "Authentication and database hosting" },
+                  { name: "Google",         desc: "OAuth sign-in (name & email only)" },
                   { name: "DodoPayments",   desc: "Payment processing" },
                   { name: "Apify",          desc: "Business data from Google Maps" },
                   { name: "Resend",         desc: "Transactional email delivery" },

@@ -114,11 +114,12 @@ async function handleActivation(data: Record<string, unknown>) {
     .from('user_profiles')
     .update({
       plan,
-      credits_limit:        config.credits_limit,
-      credits_used:         0,
-      dodo_customer_id:     customerId     ?? null,
-      dodo_subscription_id: subscriptionId ?? null,
-      updated_at:           new Date().toISOString(),
+      credits_limit:           config.credits_limit,
+      credits_used:            0,
+      enrichment_emails_used:  0,
+      dodo_customer_id:        customerId     ?? null,
+      dodo_subscription_id:    subscriptionId ?? null,
+      updated_at:              new Date().toISOString(),
     })
     .eq('id', userId)
 
@@ -132,7 +133,7 @@ async function handleRenewal(data: Record<string, unknown>) {
 
   const { error } = await supabaseAdmin
     .from('user_profiles')
-    .update({ credits_used: 0, updated_at: new Date().toISOString() })
+    .update({ credits_used: 0, enrichment_emails_used: 0, updated_at: new Date().toISOString() })
     .eq('id', userId)
 
   if (error) console.error('[dodo-webhook] renewal reset failed:', error.message)

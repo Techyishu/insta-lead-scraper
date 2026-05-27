@@ -12,8 +12,14 @@ const PLAN_MAX_RESULTS: Record<string, number> = {
 }
 const PLAN_CAN_ENRICH: Record<string, boolean> = {
   free:    false,
-  starter: false,
+  starter: true,
   growth:  true,
+}
+// Max enriched email addresses per billing cycle (Infinity = unlimited)
+const PLAN_ENRICH_EMAIL_LIMIT: Record<string, number> = {
+  free:    0,
+  starter: 100,
+  growth:  Infinity,
 }
 // Absolute ceiling regardless of plan (Apify cost/timeout guard)
 const ABSOLUTE_MAX = 2000
@@ -68,7 +74,7 @@ export async function POST(request: NextRequest) {
     // ── 3. Load or create user profile ────────────────────────────────────────
     let { data: profile } = await supabase
       .from('user_profiles')
-      .select('credits_used, credits_limit, plan')
+      .select('credits_used, credits_limit, plan, enrichment_emails_used')
       .eq('id', user.id)
       .single()
 
@@ -86,7 +92,7 @@ export async function POST(request: NextRequest) {
       )
       const { data: fresh } = await supabase
         .from('user_profiles')
-        .select('credits_used, credits_limit, plan')
+        .select('credits_used, credits_limit, plan, enrichment_emails_used')
         .eq('id', user.id)
         .single()
       profile = fresh
@@ -132,9 +138,18 @@ export async function POST(request: NextRequest) {
     const effectiveMax = Math.min(clientMax, planMaxResults, ABSOLUTE_MAX, creditsRemaining)
 
     // ── 6. Enrichment gate (server-enforced) ──────────────────────────────────
-    const effectiveEnrich = enrichContacts && canEnrich
+    const enrichEmailLimit     = PLAN_ENRICH_EMAIL_LIMIT[plan] ?? 0
+    const enrichEmailsUsed     = profile?.enrichment_emails_used ?? 0
+    const enrichEmailRemaining = enrichEmailLimit === Infinity
+      ? Infinity
+      : Math.max(enrichEmailLimit - enrichEmailsUsed, 0)
+
+    const effectiveEnrich = enrichContacts && canEnrich && enrichEmailRemaining > 0
     if (enrichContacts && !canEnrich) {
       console.warn('[leadmapper] enrichContacts blocked — plan:', plan)
+    }
+    if (enrichContacts && canEnrich && enrichEmailRemaining <= 0) {
+      console.warn('[leadmapper] enrichment email quota exhausted — plan:', plan, 'used:', enrichEmailsUsed)
     }
 
     // ── 7. Apify ──────────────────────────────────────────────────────────────
@@ -172,8 +187,10 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(
-      '[leadmapper] plan=%s max=%d enrich=%s phone=%s website=%s(%s)',
-      plan, effectiveMax, effectiveEnrich, effectivePhone, effectiveWebsite, websiteParam
+      '[leadmapper] plan=%s max=%d enrich=%s enrichRemaining=%s phone=%s website=%s(%s)',
+      plan, effectiveMax, effectiveEnrich,
+      enrichEmailRemaining === Infinity ? '∞' : enrichEmailRemaining,
+      effectivePhone, effectiveWebsite, websiteParam
     )
 
     const apifyUrl =
@@ -260,12 +277,27 @@ export async function POST(request: NextRequest) {
 
     // Post-scrape filter for phone (actor handles website natively via `website` param).
     // Website "with/without" is already enforced by Apify; we re-check as a safety net.
-    const finalLeads = leads.filter((l) => {
+    const filteredLeads = leads.filter((l) => {
       if (effectivePhone   === 'with'    && !l.phone)   return false
       if (effectivePhone   === 'without' &&  l.phone)   return false
       if (effectiveWebsite === 'with'    && !l.website) return false
       if (effectiveWebsite === 'without' &&  l.website) return false
       return true
+    })
+
+    // ── Cap enrichment emails for plans with a finite quota (e.g. Starter: 100) ──
+    let emailsConsumedThisRun = 0
+    const finalLeads = filteredLeads.map((l) => {
+      if (!l.emails || !effectiveEnrich) return l
+      if (enrichEmailRemaining === Infinity) {
+        emailsConsumedThisRun += l.emails.length
+        return l
+      }
+      const budget = Math.max(enrichEmailRemaining - emailsConsumedThisRun, 0)
+      if (budget === 0) return { ...l, emails: null }
+      const trimmed = l.emails.slice(0, budget)
+      emailsConsumedThisRun += trimmed.length
+      return { ...l, emails: trimmed }
     })
 
     // ── 6. Deduct credits (non-fatal) ─────────────────────────────────────────
@@ -275,9 +307,16 @@ export async function POST(request: NextRequest) {
     let searchId: string | null = null
 
     try {
+      const updatePayload: Record<string, unknown> = { credits_used: newCreditsUsed }
+      if (effectiveEnrich && emailsConsumedThisRun > 0) {
+        updatePayload.enrichment_emails_used = Math.min(
+          enrichEmailsUsed + emailsConsumedThisRun,
+          enrichEmailLimit === Infinity ? Number.MAX_SAFE_INTEGER : enrichEmailLimit
+        )
+      }
       await supabase
         .from('user_profiles')
-        .update({ credits_used: newCreditsUsed })
+        .update(updatePayload)
         .eq('id', user.id)
     } catch (e) {
       console.error('[leadmapper] credit deduction failed (non-fatal):', e)
@@ -343,6 +382,10 @@ export async function POST(request: NextRequest) {
       console.error('[leadmapper] search/leads log failed (non-fatal):', e)
     }
 
+    const newEnrichEmailsUsed = effectiveEnrich && emailsConsumedThisRun > 0
+      ? Math.min(enrichEmailsUsed + emailsConsumedThisRun, enrichEmailLimit === Infinity ? Number.MAX_SAFE_INTEGER : enrichEmailLimit)
+      : enrichEmailsUsed
+
     return NextResponse.json({
       success: true,
       leads: finalLeads,
@@ -350,10 +393,13 @@ export async function POST(request: NextRequest) {
       location,
       keyword,
       searchId,
-      creditsUsed:      newCreditsUsed,
+      creditsUsed:           newCreditsUsed,
       creditsLimit,
-      creditsRemaining: creditsLimit - newCreditsUsed,
+      creditsRemaining:      creditsLimit - newCreditsUsed,
       planMaxResults,
+      enrichEmailsUsed:      newEnrichEmailsUsed,
+      enrichEmailLimit:      enrichEmailLimit === Infinity ? null : enrichEmailLimit,
+      enrichEmailRemaining:  enrichEmailLimit === Infinity ? null : Math.max(enrichEmailLimit - newEnrichEmailsUsed, 0),
     })
 
   } catch (error) {

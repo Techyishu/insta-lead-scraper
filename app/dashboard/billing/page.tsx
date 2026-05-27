@@ -20,7 +20,7 @@ const PLANS = [
     name: "Starter",
     price: 49,
     credits: "2,500 credits/month",
-    features: ["2,500 credits/month", "Phone & website filter", "CSV export", "Email support"],
+    features: ["2,500 credits/month", "Phone & website filter", "Contact enrichment (100 emails/mo)", "CSV export", "Email support"],
     cta: "Upgrade to Starter",
   },
   {

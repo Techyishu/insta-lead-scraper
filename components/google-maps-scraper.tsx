@@ -87,11 +87,19 @@ export default function GoogleMapsScraper() {
   const [credits, setCredits] = useState<Credits>({ used: 0, limit: 50, remaining: 50 })
   const [creditsLoading, setCreditsLoading] = useState(true)
   const [plan, setPlan] = useState<string>("free")
+  const [enrichContacts, setEnrichContacts] = useState(false)
+  const [enrichUsed, setEnrichUsed]         = useState(0)
+  const ENRICH_LIMIT = 100 // Starter plan cap
 
   const PLAN_MAX: Record<string, number> = { free: 50, starter: 1000, growth: 2000 }
-  const FILTER_PLANS = ["starter", "growth"]
-  const planMax    = PLAN_MAX[plan] ?? 50
-  const canFilter  = FILTER_PLANS.includes(plan)
+  const FILTER_PLANS  = ["starter", "growth"]
+  const ENRICH_PLANS  = ["starter", "growth"]
+  const planMax       = PLAN_MAX[plan] ?? 50
+  const canFilter     = FILTER_PLANS.includes(plan)
+  const canEnrich     = ENRICH_PLANS.includes(plan)
+  const enrichIsLimited = plan === "starter" // Growth is unlimited
+  const enrichRemaining = enrichIsLimited ? Math.max(ENRICH_LIMIT - enrichUsed, 0) : Infinity
+  const enrichExhausted = enrichIsLimited && enrichRemaining <= 0
 
   const ALL_OPTIONS = [10, 25, 50, 100, 200, 500, 1000, 2000]
   const resultOptions = ALL_OPTIONS.filter((n) => n <= planMax)
@@ -103,16 +111,18 @@ export default function GoogleMapsScraper() {
       if (!user) return
       const { data: profile } = await supabase
         .from("user_profiles")
-        .select("credits_used, credits_limit, plan")
+        .select("credits_used, credits_limit, plan, enrichment_emails_used")
         .eq("id", user.id)
         .single()
       if (profile) {
-        const used  = profile.credits_used  ?? 0
-        const limit = profile.credits_limit ?? 50
-        const p     = profile.plan ?? "free"
+        const p = profile as typeof profile & { enrichment_emails_used?: number }
+        const used  = p.credits_used  ?? 0
+        const limit = p.credits_limit ?? 50
+        const plan  = p.plan ?? "free"
         setCredits({ used, limit, remaining: limit - used })
-        setPlan(p)
-        const pMax = PLAN_MAX[p] ?? 50
+        setPlan(plan)
+        setEnrichUsed(p.enrichment_emails_used ?? 0)
+        const pMax = PLAN_MAX[plan] ?? 50
         setMaxResults((prev) => String(Math.min(parseInt(prev, 10) || 50, pMax)))
       }
       setCreditsLoading(false)
@@ -151,6 +161,7 @@ export default function GoogleMapsScraper() {
           maxResults: parseInt(maxResults),
           phoneFilter,
           websiteFilter,
+          enrichContacts: canEnrich && enrichContacts && !enrichExhausted,
         }),
       })
 
@@ -179,6 +190,9 @@ export default function GoogleMapsScraper() {
           remaining: data.creditsRemaining,
         })
       }
+      if (data.enrichEmailsUsed !== undefined) {
+        setEnrichUsed(data.enrichEmailsUsed)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
     } finally {
@@ -187,7 +201,8 @@ export default function GoogleMapsScraper() {
   }
 
   const buildCSV = (rows: Lead[]) => {
-    const headers = ["Business Name", "Address", "Phone", "Website", "Rating", "Reviews", "Category", "Google Maps"]
+    const hasEmails = rows.some((l) => l.emails?.length)
+    const headers = ["Business Name", "Address", "Phone", "Website", "Rating", "Reviews", "Category", "Google Maps", ...(hasEmails ? ["Emails"] : [])]
     const csvRows = rows.map((l) => [
       `"${(l.title || '').replace(/"/g, '""')}"`,
       `"${(l.address || '').replace(/"/g, '""')}"`,
@@ -197,6 +212,7 @@ export default function GoogleMapsScraper() {
       l.reviewsCount ?? "",
       `"${(l.category || '').replace(/"/g, '""')}"`,
       `"${l.mapsUrl || ''}"`,
+      ...(hasEmails ? [`"${(l.emails ?? []).join('; ')}"`] : []),
     ].join(","))
     return [headers.join(","), ...csvRows].join("\n")
   }
@@ -437,6 +453,48 @@ export default function GoogleMapsScraper() {
               <span className="font-jetbrains text-[10px] font-bold bg-[#FFE45E] text-[#1A1A1A] border border-[#1A1A1A] rounded-[4px] px-1.5 py-0.5">Starter+</span>
             </Link>
           )}
+
+          {/* Enrichment toggle */}
+          {canEnrich ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => !enrichExhausted && setEnrichContacts((v) => !v)}
+                disabled={enrichExhausted}
+                className={`flex items-center gap-2 font-jetbrains text-[11px] font-bold border-2 rounded-[8px] px-3 py-1.5 transition-all ${
+                  enrichExhausted
+                    ? "opacity-40 cursor-not-allowed border-[#B8B5AA] text-[#B8B5AA] bg-transparent"
+                    : enrichContacts
+                    ? "bg-[#1A1A1A] border-[#1A1A1A] text-[#FFE45E]"
+                    : "bg-[#EFEBE0] border-[#1A1A1A] text-[#6B6B6B] hover:text-[#1A1A1A]"
+                }`}
+              >
+                <span>{enrichContacts ? "✓" : "○"}</span>
+                Enrich emails
+              </button>
+              {enrichIsLimited && (
+                <span className={`font-jetbrains text-[10px] whitespace-nowrap ${enrichExhausted ? "text-[#FF6B5C] font-bold" : "text-[#B8B5AA]"}`}>
+                  {enrichExhausted ? "quota full" : `${enrichRemaining} / ${ENRICH_LIMIT} left`}
+                </span>
+              )}
+              {enrichExhausted && (
+                <Link
+                  href="/dashboard/billing"
+                  className="font-jetbrains text-[10px] font-bold text-[#1A1A1A] underline underline-offset-2 whitespace-nowrap"
+                >
+                  Upgrade for unlimited →
+                </Link>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/dashboard/billing"
+              className="font-kalam font-bold text-[12px] text-[#6B6B6B] border-2 border-dashed border-[#B8B5AA] rounded-[8px] px-3 py-1.5 hover:border-[#1A1A1A] hover:text-[#1A1A1A] transition-all flex items-center gap-2 self-start"
+            >
+              🔒 Enrich emails
+              <span className="font-jetbrains text-[10px] font-bold bg-[#FFE45E] text-[#1A1A1A] border border-[#1A1A1A] rounded-[4px] px-1.5 py-0.5">Starter+</span>
+            </Link>
+          )}
         </div>
 
         {/* Estimated cost */}
@@ -554,7 +612,7 @@ export default function GoogleMapsScraper() {
                       className="rounded border-2 border-[#1A1A1A] accent-[#1A1A1A]"
                     />
                   </th>
-                  {["Business Name", "Category", "Phone", "Rating", "Website", "Maps"].map((h) => (
+                  {["Business Name", "Category", "Phone", "Rating", "Website", ...(leads.some(l => l.emails?.length) ? ["Emails"] : []), "Maps"].map((h) => (
                     <th
                       key={h}
                       className="px-4 py-3 text-left font-jetbrains text-[10px] font-bold text-[#6B6B6B] uppercase tracking-wider whitespace-nowrap"
@@ -637,6 +695,25 @@ export default function GoogleMapsScraper() {
                         <span className="text-[#B8B5AA] text-xs">—</span>
                       )}
                     </td>
+
+                    {leads.some(l => l.emails?.length) && (
+                      <td className="px-4 py-3 max-w-[180px]" onClick={(e) => e.stopPropagation()}>
+                        {lead.emails?.length ? (
+                          <div className="flex flex-col gap-0.5">
+                            {lead.emails.slice(0, 2).map((email, ei) => (
+                              <span key={ei} className="font-jetbrains text-[10px] text-[#3A3A3A] truncate block max-w-[160px]" title={email}>
+                                {email}
+                              </span>
+                            ))}
+                            {lead.emails.length > 2 && (
+                              <span className="font-jetbrains text-[10px] text-[#B8B5AA]">+{lead.emails.length - 2} more</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[#B8B5AA] text-xs">—</span>
+                        )}
+                      </td>
+                    )}
 
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       {lead.mapsUrl ? (

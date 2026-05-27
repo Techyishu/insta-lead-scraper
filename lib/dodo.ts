@@ -10,6 +10,7 @@ export const dodo = new DodoPayments({
 export const PLAN_PRODUCT_IDS: Record<string, string> = {
   starter: process.env.DODO_STARTER_PRODUCT_ID!,
   growth:  process.env.DODO_GROWTH_PRODUCT_ID!,
+  scale:   process.env.DODO_SCALE_PRODUCT_ID!,
 }
 
 // ── Reverse map: product_id → plan name ──────────────────────────────────────
@@ -17,10 +18,12 @@ export const PLAN_PRODUCT_IDS: Record<string, string> = {
 export const PRODUCT_ID_TO_PLAN: Record<string, string> = {
   [process.env.DODO_STARTER_PRODUCT_ID!]: 'starter',
   [process.env.DODO_GROWTH_PRODUCT_ID!]:  'growth',
+  [process.env.DODO_SCALE_PRODUCT_ID!]:   'scale',
 }
 
 // What to set in user_profiles when a plan activates / renews
 export const PLAN_CONFIGS: Record<string, { credits_limit: number }> = {
-  starter: { credits_limit: 2_500  },
-  growth:  { credits_limit: 5_000  },
+  starter: { credits_limit:  2_500 },
+  growth:  { credits_limit:  5_000 },
+  scale:   { credits_limit: 12_000 },
 }

@@ -9,17 +9,20 @@ const PLAN_MAX_RESULTS: Record<string, number> = {
   free:    50,
   starter: 1000,
   growth:  2000,
+  scale:   2000,
 }
 const PLAN_CAN_ENRICH: Record<string, boolean> = {
   free:    false,
   starter: true,
   growth:  true,
+  scale:   true,
 }
 // Max enriched email addresses per billing cycle (Infinity = unlimited)
 const PLAN_ENRICH_EMAIL_LIMIT: Record<string, number> = {
   free:    0,
   starter: 100,
-  growth:  Infinity,
+  growth:  500,
+  scale:   2_000,
 }
 // Absolute ceiling regardless of plan (Apify cost/timeout guard)
 const ABSOLUTE_MAX = 2000
@@ -111,7 +114,7 @@ export async function POST(request: NextRequest) {
     const planMaxResults = PLAN_MAX_RESULTS[plan]
     const canEnrich      = PLAN_CAN_ENRICH[plan]
     // Phone + website filters: Starter & Growth only; free always gets 'any'
-    const FILTER_PLANS      = ['starter', 'growth']
+    const FILTER_PLANS      = ['starter', 'growth', 'scale']
     const canFilter         = FILTER_PLANS.includes(plan)
     const effectivePhone    = canFilter ? phoneFilter    : 'any'
     const effectiveWebsite  = canFilter ? websiteFilter  : 'any'

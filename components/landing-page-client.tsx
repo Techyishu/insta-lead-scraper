@@ -578,23 +578,33 @@ function Pricing() {
     },
     {
       name: "Starter",
-      price: 49,
-      priceLabel: "$49",
+      price: 39,
+      priceLabel: "$39",
       credits: "2,500 credits / mo",
       popular: false,
-      features: ["2,500 credits/month", "Everything in Free", "Email support", "Bulk export"],
+      features: ["2,500 credits/month", "100 email enrichments/mo", "Email support", "Bulk export"],
       cta: "Choose Starter",
       href: "/signup?plan=starter",
     },
     {
       name: "Growth",
-      price: 89,
-      priceLabel: "$89",
+      price: 79,
+      priceLabel: "$79",
       credits: "5,000 credits / mo",
       popular: true,
-      features: ["5,000 credits/month", "Bulk processing", "Priority support", "Unlimited saved searches"],
+      features: ["5,000 credits/month", "500 email enrichments/mo", "Priority support", "Unlimited saved searches"],
       cta: "Choose Growth",
       href: "/signup?plan=growth",
+    },
+    {
+      name: "Scale",
+      price: 129,
+      priceLabel: "$129",
+      credits: "12,000 credits / mo",
+      popular: false,
+      features: ["12,000 credits/month", "2,000 email enrichments/mo", "Bulk processing", "Dedicated support", "Early feature access"],
+      cta: "Choose Scale",
+      href: "/signup?plan=scale",
     },
   ]
 
@@ -608,7 +618,7 @@ function Pricing() {
           Start free. Upgrade<br />when you ship.
         </h2>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-3xl">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl">
           {plans.map((plan) => (
             <div
               key={plan.name}

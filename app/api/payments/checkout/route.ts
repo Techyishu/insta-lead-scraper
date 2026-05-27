@@ -3,9 +3,9 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { dodo, PLAN_PRODUCT_IDS, PLAN_CONFIGS } from '@/lib/dodo'
 
-const ALLOWED_PLANS = ['starter', 'growth'] as const
+const ALLOWED_PLANS = ['starter', 'growth', 'scale'] as const
 type UpgradePlan = typeof ALLOWED_PLANS[number]
-const PLAN_ORDER  = ['free', 'starter', 'growth']
+const PLAN_ORDER  = ['free', 'starter', 'growth', 'scale']
 
 const supabaseAdmin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

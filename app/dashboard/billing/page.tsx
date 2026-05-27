@@ -18,25 +18,39 @@ const PLANS = [
   {
     id: "starter",
     name: "Starter",
-    price: 49,
+    price: 39,
     credits: "2,500 credits/month",
-    features: ["2,500 credits/month", "Phone & website filter", "Contact enrichment (100 emails/mo)", "CSV export", "Email support"],
+    features: ["2,500 credits/month", "Phone & website filter", "100 email enrichments/mo", "CSV export", "Email support"],
     cta: "Upgrade to Starter",
   },
   {
     id: "growth",
     name: "Growth",
-    price: 89,
+    price: 79,
     credits: "5,000 credits/month",
     popular: true,
     features: [
       "5,000 credits/month",
-      "Contact enrichment (emails + socials)",
+      "500 email enrichments/mo",
       "Bulk processing",
       "Priority support",
       "Unlimited saved searches",
     ],
     cta: "Upgrade to Growth",
+  },
+  {
+    id: "scale",
+    name: "Scale",
+    price: 129,
+    credits: "12,000 credits/month",
+    features: [
+      "12,000 credits/month",
+      "2,000 email enrichments/mo",
+      "Bulk processing",
+      "Dedicated support",
+      "Early access to new features",
+    ],
+    cta: "Upgrade to Scale",
   },
 ]
 
@@ -373,7 +387,7 @@ function BillingPageInner() {
       {/* Plan cards */}
       <div>
         <h3 className="font-kalam font-bold text-[#1A1A1A] text-lg mb-4">Choose a plan</h3>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {PLANS.map((plan) => {
             const isCurrent   = plan.id === currentPlan
             const isDowngrade = PLANS.findIndex(p => p.id === plan.id) < PLANS.findIndex(p => p.id === currentPlan)

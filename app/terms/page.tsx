@@ -216,11 +216,7 @@ export default function TermsPage() {
 
             <Section num={14} title="Contact">
               Questions about these Terms? Reach us through our{" "}
-              <Link href="/contact" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">Contact page</Link>{" "}
-              or email{" "}
-              <a href="mailto:shashanksingh67567@gmail.com" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">
-                shashanksingh67567@gmail.com
-              </a>.
+              <Link href="/contact" className="font-bold text-[#1A1A1A] underline underline-offset-2 hover:opacity-70">Contact page</Link>.
             </Section>
           </div>
 

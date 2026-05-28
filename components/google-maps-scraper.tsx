@@ -70,6 +70,20 @@ function SkeletonRow() {
   )
 }
 
+// "austin tx" → "austin, TX"  |  "san francisco CA" → "san francisco, CA"
+// Already-comma'd input ("austin, tx") is left untouched.
+function normalizeCityState(raw: string): string {
+  if (!raw || raw.includes(',')) return raw
+  const parts = raw.trim().split(/\s+/)
+  if (parts.length >= 2) {
+    const last = parts[parts.length - 1]
+    if (/^[A-Za-z]{2}$/.test(last)) {
+      return parts.slice(0, -1).join(' ') + ', ' + last.toUpperCase()
+    }
+  }
+  return raw
+}
+
 export default function GoogleMapsScraper() {
   const searchParams = useSearchParams()
   const [country, setCountry]     = useState(() => searchParams.get("country") ?? "United States")
@@ -149,7 +163,7 @@ export default function GoogleMapsScraper() {
 
     try {
       const location = cityState.trim()
-        ? `${cityState.trim()}, ${country}`
+        ? `${normalizeCityState(cityState.trim())}, ${country}`
         : country
 
       const response = await fetch("/api/google-maps-scraper", {
@@ -219,7 +233,7 @@ export default function GoogleMapsScraper() {
 
   const exportRows = async (rows: Lead[], suffix = "") => {
     if (rows.length === 0) return
-    const locationSlug = (cityState.trim() ? `${cityState.trim()}, ${country}` : country)
+    const locationSlug = (cityState.trim() ? `${normalizeCityState(cityState.trim())}, ${country}` : country)
       .replace(/[^a-zA-Z0-9]/g, "-")
     const filename = `leadmapper-${keyword.replace(/\s+/g, "-")}-${locationSlug}${suffix}.csv`
     const blob = new Blob([buildCSV(rows)], { type: "text/csv;charset=utf-8;" })
@@ -248,7 +262,7 @@ export default function GoogleMapsScraper() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         keyword,
-        location: cityState.trim() ? `${cityState.trim()}, ${country}` : country,
+        location: cityState.trim() ? `${normalizeCityState(cityState.trim())}, ${country}` : country,
         count: rows.length,
       }),
     }).catch(() => {/* intentionally silent */})

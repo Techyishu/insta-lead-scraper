@@ -5,11 +5,13 @@ import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 
 interface Stats {
-  creditsRemaining: number
-  creditsLimit: number
-  totalLeadsExported: number
-  searchesThisMonth: number
-  plan: string
+  creditsRemaining:    number
+  creditsLimit:        number
+  b2bCreditsRemaining: number
+  b2bCreditsLimit:     number
+  totalLeadsExported:  number
+  searchesThisMonth:   number
+  plan:        string
   hasSearched: boolean
   hasExported: boolean
 }
@@ -23,11 +25,13 @@ function greeting(name: string | null) {
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({
-    creditsRemaining: 50,
-    creditsLimit: 50,
-    totalLeadsExported: 0,
-    searchesThisMonth: 0,
-    plan: "free",
+    creditsRemaining:    50,
+    creditsLimit:        50,
+    b2bCreditsRemaining: 10,
+    b2bCreditsLimit:     10,
+    totalLeadsExported:  0,
+    searchesThisMonth:   0,
+    plan:        "free",
     hasSearched: false,
     hasExported: false,
   })
@@ -45,7 +49,7 @@ export default function DashboardPage() {
 
       const { data: profile } = await supabase
         .from("user_profiles")
-        .select("credits_used, credits_limit, plan, full_name")
+        .select("credits_used, credits_limit, b2b_credits_used, b2b_credits_limit, plan, full_name")
         .eq("id", user.id)
         .single()
 
@@ -72,15 +76,19 @@ export default function DashboardPage() {
         .eq("user_id", user.id)
 
       if (profile) {
-        const used = profile.credits_used ?? 0
-        const limit = profile.credits_limit ?? 50
+        const used          = profile.credits_used     ?? 0
+        const limit         = profile.credits_limit    ?? 50
+        const b2bUsed       = profile.b2b_credits_used  ?? 0
+        const b2bLimit      = profile.b2b_credits_limit ?? 10
         if (profile.full_name) setUserName(profile.full_name)
         setStats({
-          creditsRemaining: limit - used,
-          creditsLimit: limit,
-          totalLeadsExported: totalExported,
-          searchesThisMonth: searchCount ?? 0,
-          plan: profile.plan ?? "free",
+          creditsRemaining:    limit    - used,
+          creditsLimit:        limit,
+          b2bCreditsRemaining: b2bLimit - b2bUsed,
+          b2bCreditsLimit:     b2bLimit,
+          totalLeadsExported:  totalExported,
+          searchesThisMonth:   searchCount ?? 0,
+          plan:        profile.plan ?? "free",
           hasSearched: (totalSearchCount ?? 0) > 0,
           hasExported: totalExported > 0,
         })
@@ -173,18 +181,33 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Credits */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {/* Local Credits */}
         <div className="bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[12px] shadow-brutal p-4">
-          <div className="font-jetbrains text-[10px] text-[#6B6B6B] uppercase tracking-wider mb-2">Credits left</div>
+          <div className="font-jetbrains text-[10px] text-[#6B6B6B] uppercase tracking-wider mb-2">Local credits</div>
           <div className="font-kalam font-bold text-3xl text-[#1A1A1A] mb-1">
             {loading ? "—" : stats.creditsRemaining}
           </div>
-          <div className="font-jetbrains text-[10px] text-[#B8B5AA] mb-2">of {stats.creditsLimit} total</div>
+          <div className="font-jetbrains text-[10px] text-[#B8B5AA] mb-2">of {stats.creditsLimit}</div>
           <div className="h-1.5 bg-[#EFEBE0] rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${lowCredits ? "bg-[#FF6B5C]" : "bg-[#1A1A1A]"}`}
               style={{ width: `${100 - creditPct}%` }}
+            />
+          </div>
+        </div>
+
+        {/* B2B Credits */}
+        <div className="bg-[#F7F4EC] border-2 border-[#1A1A1A] rounded-[12px] shadow-brutal p-4">
+          <div className="font-jetbrains text-[10px] text-[#6B6B6B] uppercase tracking-wider mb-2">B2B credits</div>
+          <div className="font-kalam font-bold text-3xl text-[#1A1A1A] mb-1">
+            {loading ? "—" : stats.b2bCreditsRemaining}
+          </div>
+          <div className="font-jetbrains text-[10px] text-[#B8B5AA] mb-2">of {stats.b2bCreditsLimit}</div>
+          <div className="h-1.5 bg-[#EFEBE0] rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all bg-[#0A66C2]"
+              style={{ width: `${stats.b2bCreditsLimit > 0 ? Math.min(((stats.b2bCreditsLimit - stats.b2bCreditsRemaining) / stats.b2bCreditsLimit) * 100, 100) : 0}%` }}
             />
           </div>
         </div>

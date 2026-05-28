@@ -7,9 +7,9 @@ export const maxDuration = 300
 // ── Plan-level hard limits (server-side only — never trust the client) ────────
 const PLAN_MAX_RESULTS: Record<string, number> = {
   free:    50,
-  starter: 1000,
-  growth:  2000,
-  scale:   2000,
+  starter: 500,
+  growth:  1_000,
+  scale:   2_000,
 }
 const PLAN_CAN_ENRICH: Record<string, boolean> = {
   free:    false,

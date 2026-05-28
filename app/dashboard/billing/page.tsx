@@ -11,27 +11,38 @@ const PLANS = [
     id: "free",
     name: "Free",
     price: 0,
-    credits: "50 total credits",
-    features: ["50 credits total (lifetime)", "Phone & website filter", "CSV export", "Basic search"],
+    credits: "50 local · 10 B2B (lifetime)",
+    features: [
+      "50 local searches (lifetime)",
+      "10 B2B contacts (lifetime)",
+      "CSV export",
+      "Basic search",
+    ],
     cta: "Current plan",
   },
   {
     id: "starter",
     name: "Starter",
     price: 39,
-    credits: "2,500 credits/month",
-    features: ["2,500 credits/month", "Phone & website filter", "500 email enrichments/mo", "CSV export", "Email support"],
+    credits: "2,000 local · 300 B2B /mo",
+    features: [
+      "2,000 local searches/month",
+      "300 B2B contacts/month",
+      "Phone & website filter",
+      "CSV export",
+      "Email support",
+    ],
     cta: "Upgrade to Starter",
   },
   {
     id: "growth",
     name: "Growth",
     price: 79,
-    credits: "5,000 credits/month",
+    credits: "5,000 local · 1,000 B2B /mo",
     popular: true,
     features: [
-      "5,000 credits/month",
-      "2,000 email enrichments/mo",
+      "5,000 local searches/month",
+      "1,000 B2B contacts/month",
       "Bulk processing",
       "Priority support",
       "Unlimited saved searches",
@@ -42,10 +53,10 @@ const PLANS = [
     id: "scale",
     name: "Scale",
     price: 129,
-    credits: "12,000 credits/month",
+    credits: "12,000 local · 3,000 B2B /mo",
     features: [
-      "12,000 credits/month",
-      "5,000 email enrichments/mo",
+      "12,000 local searches/month",
+      "3,000 B2B contacts/month",
       "Bulk processing",
       "Dedicated support",
       "Early access to new features",
@@ -72,10 +83,12 @@ function BillingPageInner() {
   const paymentStatus = searchParams.get("payment")
   const paymentPlan   = searchParams.get("plan")
 
-  const [currentPlan, setCurrentPlan]         = useState("free")
-  const [creditsUsed, setCreditsUsed]         = useState(0)
-  const [creditsLimit, setCreditsLimit]       = useState(50)
-  const [loading, setLoading]                 = useState(true)
+  const [currentPlan, setCurrentPlan]             = useState("free")
+  const [creditsUsed, setCreditsUsed]             = useState(0)
+  const [creditsLimit, setCreditsLimit]           = useState(50)
+  const [b2bCreditsUsed, setB2bCreditsUsed]       = useState(0)
+  const [b2bCreditsLimit, setB2bCreditsLimit]     = useState(10)
+  const [loading, setLoading]                     = useState(true)
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false)
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const [checkoutError, setCheckoutError]     = useState("")
@@ -95,7 +108,7 @@ function BillingPageInner() {
     if (!user) return null
     const { data: profile } = await supabase
       .from("user_profiles")
-      .select("credits_used, credits_limit, plan, cancel_at_period_end")
+      .select("credits_used, credits_limit, b2b_credits_used, b2b_credits_limit, plan, cancel_at_period_end")
       .eq("id", user.id)
       .single()
     return profile
@@ -107,6 +120,8 @@ function BillingPageInner() {
         setCurrentPlan(profile.plan ?? "free")
         setCreditsUsed(profile.credits_used ?? 0)
         setCreditsLimit(profile.credits_limit ?? 50)
+        setB2bCreditsUsed(profile.b2b_credits_used ?? 0)
+        setB2bCreditsLimit(profile.b2b_credits_limit ?? 10)
         setCancelAtPeriodEnd(profile.cancel_at_period_end ?? false)
       }
       setLoading(false)
@@ -130,6 +145,8 @@ function BillingPageInner() {
         setCurrentPlan(profile.plan)
         setCreditsUsed(profile.credits_used ?? 0)
         setCreditsLimit(profile.credits_limit ?? 50)
+        setB2bCreditsUsed(profile.b2b_credits_used ?? 0)
+        setB2bCreditsLimit(profile.b2b_credits_limit ?? 10)
         setCancelAtPeriodEnd(profile.cancel_at_period_end ?? false)
         setPolling(false)
         clearInterval(interval)
@@ -184,6 +201,8 @@ function BillingPageInner() {
           setCurrentPlan(updated.plan ?? planId)
           setCreditsUsed(updated.credits_used ?? 0)
           setCreditsLimit(updated.credits_limit ?? 50)
+          setB2bCreditsUsed(updated.b2b_credits_used ?? 0)
+          setB2bCreditsLimit(updated.b2b_credits_limit ?? 10)
           setCancelAtPeriodEnd(updated.cancel_at_period_end ?? false)
         }
         setCancelledSuccessfully(false)
@@ -217,11 +236,13 @@ function BillingPageInner() {
     }
   }
 
-  const creditsRemaining = creditsLimit - creditsUsed
-  const creditPct   = creditsLimit > 0 ? Math.min((creditsUsed / creditsLimit) * 100, 100) : 0
-  const lowCredits  = creditsRemaining <= Math.ceil(creditsLimit * 0.15)
-  const planLabel   = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)
-  const isPaidPlan  = currentPlan !== "free"
+  const creditsRemaining    = creditsLimit - creditsUsed
+  const b2bCreditsRemaining = b2bCreditsLimit - b2bCreditsUsed
+  const creditPct    = creditsLimit > 0    ? Math.min((creditsUsed    / creditsLimit)    * 100, 100) : 0
+  const b2bCreditPct = b2bCreditsLimit > 0 ? Math.min((b2bCreditsUsed / b2bCreditsLimit) * 100, 100) : 0
+  const lowCredits   = creditsRemaining <= Math.ceil(creditsLimit * 0.15)
+  const planLabel    = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)
+  const isPaidPlan   = currentPlan !== "free"
 
   const formatAmount = (amount: number, currency: string) => {
     const divisor = ["jpy", "krw"].includes(currency.toLowerCase()) ? 1 : 100
@@ -307,30 +328,56 @@ function BillingPageInner() {
               )}
             </div>
           </div>
-          <div className="text-right">
-            <div className="font-jetbrains text-[10px] text-[#6B6B6B] mb-0.5">Credits remaining</div>
-            {loading ? (
-              <div className="h-9 w-24 bg-[#EFEBE0] rounded-[8px] animate-pulse ml-auto" />
-            ) : (
-              <div className={`font-kalam font-bold text-3xl ${lowCredits ? "text-[#FF6B5C]" : "text-[#1A1A1A]"}`}>
-                {creditsRemaining} / {creditsLimit}
-              </div>
-            )}
+          <div className="flex gap-4">
+            <div className="text-right">
+              <div className="font-jetbrains text-[10px] text-[#6B6B6B] mb-0.5">Local credits</div>
+              {loading ? (
+                <div className="h-9 w-20 bg-[#EFEBE0] rounded-[8px] animate-pulse ml-auto" />
+              ) : (
+                <div className={`font-kalam font-bold text-2xl ${lowCredits ? "text-[#FF6B5C]" : "text-[#1A1A1A]"}`}>
+                  {creditsRemaining} / {creditsLimit}
+                </div>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="font-jetbrains text-[10px] text-[#6B6B6B] mb-0.5">B2B credits</div>
+              {loading ? (
+                <div className="h-9 w-20 bg-[#EFEBE0] rounded-[8px] animate-pulse ml-auto" />
+              ) : (
+                <div className="font-kalam font-bold text-2xl text-[#1A1A1A]">
+                  {b2bCreditsRemaining} / {b2bCreditsLimit}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {!loading && (
           <>
-            <div className="mb-4">
-              <div className="flex items-center justify-between font-jetbrains text-[10px] text-[#6B6B6B] mb-1.5">
-                <span>Credit usage</span>
-                <span>{Math.round(creditPct)}% used</span>
+            <div className="mb-4 grid grid-cols-2 gap-4">
+              <div>
+                <div className="flex items-center justify-between font-jetbrains text-[10px] text-[#6B6B6B] mb-1.5">
+                  <span>Local search</span>
+                  <span>{Math.round(creditPct)}% used</span>
+                </div>
+                <div className="h-2 bg-[#EFEBE0] rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${lowCredits ? "bg-[#FF6B5C]" : "bg-[#1A1A1A]"}`}
+                    style={{ width: `${creditPct}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 bg-[#EFEBE0] rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${lowCredits ? "bg-[#FF6B5C]" : "bg-[#1A1A1A]"}`}
-                  style={{ width: `${creditPct}%` }}
-                />
+              <div>
+                <div className="flex items-center justify-between font-jetbrains text-[10px] text-[#6B6B6B] mb-1.5">
+                  <span>B2B contacts</span>
+                  <span>{Math.round(b2bCreditPct)}% used</span>
+                </div>
+                <div className="h-2 bg-[#EFEBE0] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all bg-[#0A66C2]"
+                    style={{ width: `${b2bCreditPct}%` }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -348,8 +395,8 @@ function BillingPageInner() {
               <div className="bg-[#EFEBE0] border border-[#1A1A1A]/20 rounded-[8px] px-4 py-3">
                 <p className="font-kalam text-sm text-[#6B6B6B]">
                   {currentPlan === "free"
-                    ? "Free plan includes 50 lifetime credits. Upgrade for monthly credit allowances."
-                    : `Your ${planLabel} plan renews monthly with ${creditsLimit.toLocaleString()} credits.`}
+                    ? "Free plan: 50 local + 10 B2B lifetime credits. Upgrade for monthly allowances."
+                    : `Your ${planLabel} plan renews monthly. Credits reset on the 1st of each month.`}
                 </p>
               </div>
             )}

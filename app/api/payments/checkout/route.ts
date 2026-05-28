@@ -123,7 +123,9 @@ export async function POST(request: NextRequest) {
           plan,
           credits_limit:        config.credits_limit,
           credits_used:         0,
-          cancel_at_period_end: false,   // clear any leftover cancellation flag
+          b2b_credits_limit:    config.b2b_credits_limit,
+          b2b_credits_used:     0,
+          cancel_at_period_end: false,
           updated_at:           new Date().toISOString(),
         })
         .eq('id', user.id)

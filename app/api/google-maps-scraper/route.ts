@@ -20,9 +20,9 @@ const PLAN_CAN_ENRICH: Record<string, boolean> = {
 // Max enriched email addresses per billing cycle (Infinity = unlimited)
 const PLAN_ENRICH_EMAIL_LIMIT: Record<string, number> = {
   free:    0,
-  starter: 100,
-  growth:  500,
-  scale:   2_000,
+  starter: 500,
+  growth:  2_000,
+  scale:   5_000,
 }
 // Absolute ceiling regardless of plan (Apify cost/timeout guard)
 const ABSOLUTE_MAX = 2000

@@ -20,7 +20,7 @@ const PLANS = [
     name: "Starter",
     price: 39,
     credits: "2,500 credits/month",
-    features: ["2,500 credits/month", "Phone & website filter", "100 email enrichments/mo", "CSV export", "Email support"],
+    features: ["2,500 credits/month", "Phone & website filter", "500 email enrichments/mo", "CSV export", "Email support"],
     cta: "Upgrade to Starter",
   },
   {
@@ -31,7 +31,7 @@ const PLANS = [
     popular: true,
     features: [
       "5,000 credits/month",
-      "500 email enrichments/mo",
+      "2,000 email enrichments/mo",
       "Bulk processing",
       "Priority support",
       "Unlimited saved searches",
@@ -45,7 +45,7 @@ const PLANS = [
     credits: "12,000 credits/month",
     features: [
       "12,000 credits/month",
-      "2,000 email enrichments/mo",
+      "5,000 email enrichments/mo",
       "Bulk processing",
       "Dedicated support",
       "Early access to new features",

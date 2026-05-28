@@ -103,16 +103,17 @@ export default function GoogleMapsScraper() {
   const [plan, setPlan] = useState<string>("free")
   const [enrichContacts, setEnrichContacts] = useState(false)
   const [enrichUsed, setEnrichUsed]         = useState(0)
-  const ENRICH_LIMIT = 100 // Starter plan cap
+
 
   const PLAN_MAX: Record<string, number> = { free: 50, starter: 1000, growth: 2000 }
   const FILTER_PLANS  = ["starter", "growth"]
-  const ENRICH_PLANS  = ["starter", "growth"]
+  const ENRICH_PLANS  = ["starter", "growth", "scale"]
+  const ENRICH_LIMIT_BY_PLAN: Record<string, number> = { starter: 500, growth: 2_000, scale: 5_000 }
   const planMax       = PLAN_MAX[plan] ?? 50
   const canFilter     = FILTER_PLANS.includes(plan)
   const canEnrich     = ENRICH_PLANS.includes(plan)
-  const enrichIsLimited = plan === "starter" // Growth is unlimited
-  const enrichRemaining = enrichIsLimited ? Math.max(ENRICH_LIMIT - enrichUsed, 0) : Infinity
+  const enrichIsLimited = ENRICH_PLANS.includes(plan)
+  const enrichRemaining = enrichIsLimited ? Math.max((ENRICH_LIMIT_BY_PLAN[plan] ?? 0) - enrichUsed, 0) : Infinity
   const enrichExhausted = enrichIsLimited && enrichRemaining <= 0
 
   const ALL_OPTIONS = [10, 25, 50, 100, 200, 500, 1000, 2000]
@@ -488,7 +489,7 @@ export default function GoogleMapsScraper() {
               </button>
               {enrichIsLimited && (
                 <span className={`font-jetbrains text-[10px] whitespace-nowrap ${enrichExhausted ? "text-[#FF6B5C] font-bold" : "text-[#B8B5AA]"}`}>
-                  {enrichExhausted ? "quota full" : `${enrichRemaining} / ${ENRICH_LIMIT} left`}
+                  {enrichExhausted ? "quota full" : `${enrichRemaining} / ${ENRICH_LIMIT_BY_PLAN[plan] ?? 0} left`}
                 </span>
               )}
               {enrichExhausted && (
